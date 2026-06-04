@@ -419,8 +419,110 @@ def add_interpreter_scenarios_slide():
         tf.paragraphs[0].font.color.rgb = DARK_GRAY
         y += 1.1
 
+def add_workflow_slide():
+    """第7页：完整工作流程"""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    
+    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = LIGHT_GRAY
+    bg.line.fill.background()
+    
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(0.7))
+    tf = title_box.text_frame
+    tf.paragraphs[0].text = "完整工作流程"
+    tf.paragraphs[0].font.size = Pt(36)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = BLUE
+    
+    # 少儿口语工作流
+    kids_header = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(1.2), Inches(5.8), Inches(0.5))
+    kids_header.fill.solid()
+    kids_header.fill.fore_color.rgb = ORANGE
+    kids_header.line.fill.background()
+    
+    kids_title = slide.shapes.add_textbox(Inches(0.5), Inches(1.2), Inches(5.8), Inches(0.5))
+    tf = kids_title.text_frame
+    tf.paragraphs[0].text = "🎯 少儿口语练习工作流"
+    tf.paragraphs[0].font.size = Pt(18)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = WHITE
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+    
+    kids_steps = [
+        "1️⃣ 选择场景：动物园/生日派对/校园",
+        "2️⃣ 开始对话：智能体扮演角色互动",
+        "3️⃣ 语音输入：孩子自然开口说话",
+        "4️⃣ AI识别：分析发音与语义",
+        "5️⃣ 智能回应：继续对话并给出鼓励",
+        "6️⃣ 勋章奖励：完成对话获得星星"
+    ]
+    
+    y = 2.0
+    for step in kids_steps:
+        tb = slide.shapes.add_textbox(Inches(0.7), Inches(y), Inches(5.4), Inches(0.45))
+        tf = tb.text_frame
+        tf.paragraphs[0].text = step
+        tf.paragraphs[0].font.size = Pt(13)
+        tf.paragraphs[0].font.color.rgb = DARK_GRAY
+        y += 0.5
+    
+    # 三级口译工作流
+    int_header = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7), Inches(1.2), Inches(5.8), Inches(0.5))
+    int_header.fill.solid()
+    int_header.fill.fore_color.rgb = BLUE
+    int_header.line.fill.background()
+    
+    int_title = slide.shapes.add_textbox(Inches(7), Inches(1.2), Inches(5.8), Inches(0.5))
+    tf = int_title.text_frame
+    tf.paragraphs[0].text = "💼 三级口译训练工作流"
+    tf.paragraphs[0].font.size = Pt(18)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = WHITE
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+    
+    int_steps = [
+        "1️⃣ 选择题型：真题/数字/模拟考",
+        "2️⃣ 播放音频：设定语速（80-140词/分）",
+        "3️⃣ 口译输出：实时录音上传",
+        "4️⃣ AI评分：三维度精准评估",
+        "5️⃣ 查看报告：错误分析+建议",
+        "6️⃣ 继续练习：针对性强化薄弱环节"
+    ]
+    
+    y = 2.0
+    for step in int_steps:
+        tb = slide.shapes.add_textbox(Inches(7.2), Inches(y), Inches(5.4), Inches(0.45))
+        tf = tb.text_frame
+        tf.paragraphs[0].text = step
+        tf.paragraphs[0].font.size = Pt(13)
+        tf.paragraphs[0].font.color.rgb = DARK_GRAY
+        y += 0.5
+    
+    # 协同工作流
+    synergy_box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(5.2), Inches(12), Inches(1.8))
+    synergy_box.fill.solid()
+    synergy_box.fill.fore_color.rgb = RGBColor(240, 245, 255)
+    synergy_box.line.fill.background()
+    
+    synergy_title = slide.shapes.add_textbox(Inches(1), Inches(5.3), Inches(11), Inches(0.5))
+    tf = synergy_title.text_frame
+    tf.paragraphs[0].text = "🔄 全链路学习协同"
+    tf.paragraphs[0].font.size = Pt(20)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = BLUE
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+    
+    synergy_flow = slide.shapes.add_textbox(Inches(1), Inches(5.9), Inches(11), Inches(0.9))
+    tf = synergy_flow.text_frame
+    tf.paragraphs[0].text = "4-12岁：少儿口语启蒙 → 建立自信 → 培养语感 → 18岁+：三级口译进阶 → 专业训练 → 考试通关"
+    tf.paragraphs[0].font.size = Pt(16)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = DARK_GRAY
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+
 def add_comparison_slide():
-    """第7页：两者对比与协同"""
+    """第8页：两者对比与协同"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     
     bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
@@ -500,7 +602,7 @@ def add_comparison_slide():
     tf.paragraphs[0].alignment = PP_ALIGN.CENTER
 
 def add_conclusion_slide():
-    """第8页：结语与展望"""
+    """第9页：结语与展望"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     
     bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
@@ -568,6 +670,7 @@ add_kids_features_slide()
 add_kids_scenarios_slide()
 add_interpreter_features_slide()
 add_interpreter_scenarios_slide()
+add_workflow_slide()
 add_comparison_slide()
 add_conclusion_slide()
 
