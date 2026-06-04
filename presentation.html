@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI英语学习助手 - 产品展示</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'inter': ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-white m-0 p-0 overflow-hidden">
+  <div id="app" class="min-h-screen bg-white relative"></div>
+
+  <script>
+    const slides = [
+      { id: 1, title: 'AI 英语学习助手', subtitle: '智能陪伴，高效学习', type: 'cover' },
+      { id: 2, title: '产品概览', type: 'overview' },
+      { id: 3, title: '少儿英语智能体', type: 'kids' },
+      { id: 4, title: '口译训练智能体', type: 'interpreter' },
+      { id: 5, title: '核心优势', type: 'advantages' },
+      { id: 6, title: '使用场景', type: 'use-cases' },
+      { id: 7, title: '使用流程', type: 'how-to' },
+      { id: 8, title: '用户反馈', type: 'testimonials' },
+      { id: 9, title: '价格方案', type: 'pricing' },
+      { id: 10, title: '开始使用', type: 'contact' }
+    ];
+
+    let currentSlide = 0;
+
+    const icons = {
+      chevronRight: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>',
+      chevronLeft: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>',
+      book: '<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>',
+      globe: '<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>',
+      users: '<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>',
+      graduation: '<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>',
+      message: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
+      sparkles: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>',
+      clock: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+      award: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>',
+      play: '<svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+      target: '<svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>',
+      mic: '<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>',
+      file: '<svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
+      brain: '<svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>',
+      trending: '<svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>',
+      arrow: '<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>',
+      check: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+      star: '<svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+      home: '<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>',
+      heart: '<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>',
+      gift: '<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 10-4 0v2m4 9h2a2 2 0 002-2v-4a2 2 0 00-4 0v4a2 2 0 104 0m-8 0h8"/></svg>',
+      crown: '<svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M3 18h18M3 15h18M5 21V7l7-4 7 4v14"/></svg>'
+    };
+
+    const renderSlide = () => {
+      const app = document.getElementById('app');
+      let html = '';
+
+      switch(currentSlide) {
+        case 0:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center text-center relative overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 opacity-20"></div>
+              <div class="absolute top-20 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+              <div class="absolute bottom-20 right-20 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style="animation-delay: 1s"></div>
+              <div class="relative z-10">
+                <div class="flex gap-4 justify-center mb-8 animate-fade-in">
+                  <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-xl text-white">${icons.book}</div>
+                  <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl text-white">${icons.globe}</div>
+                </div>
+                <h1 class="text-8xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-6 animate-fade-in">
+                  AI 英语学习助手
+                </h1>
+                <p class="text-3xl text-gray-600 mb-8 animate-fade-in" style="animation-delay: 0.3s">
+                  智能陪伴，高效学习
+                </p>
+                <div class="flex gap-6 justify-center animate-fade-in" style="animation-delay: 0.6s">
+                  <div class="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg">
+                    <span class="text-2xl font-bold text-blue-600">10,000+</span>
+                    <p class="text-gray-600 text-sm">活跃用户</p>
+                  </div>
+                  <div class="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg">
+                    <span class="text-2xl font-bold text-purple-600">95%</span>
+                    <p class="text-gray-600 text-sm">满意度</p>
+                  </div>
+                  <div class="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg">
+                    <span class="text-2xl font-bold text-pink-600">24/7</span>
+                    <p class="text-gray-600 text-sm">全天候服务</p>
+                  </div>
+                </div>
+              </div>
+              <div class="absolute bottom-10 text-gray-400 animate-bounce">
+                <p class="text-sm mb-2">点击右侧箭头继续</p>
+                <div class="flex justify-center">${icons.chevronRight}</div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 1:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-16">
+                产品概览
+              </h2>
+              <div class="grid md:grid-cols-2 gap-12 max-w-6xl">
+                <div class="bg-gradient-to-br from-orange-50 via-yellow-50 to-amber-50 rounded-3xl p-10 border-2 border-orange-200 hover:shadow-2xl transition-all duration-500 hover:-translate-y-3">
+                  <div class="w-24 h-24 bg-gradient-to-br from-orange-400 to-yellow-400 rounded-2xl flex items-center justify-center mb-8 shadow-lg text-white">
+                    ${icons.users}
+                  </div>
+                  <h3 class="text-3xl font-bold text-gray-800 mb-4">少儿英语智能体</h3>
+                  <p class="text-gray-600 text-lg leading-relaxed mb-6">
+                    专为3-12岁儿童设计的英语学习伙伴，通过互动游戏、趣味故事和个性化学习计划，让孩子在快乐中学习英语。
+                  </p>
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-3"><div class="text-green-500">${icons.check}</div><span class="text-gray-700">趣味互动对话</span></div>
+                    <div class="flex items-center gap-3"><div class="text-green-500">${icons.check}</div><span class="text-gray-700">绘本智能导读</span></div>
+                    <div class="flex items-center gap-3"><div class="text-green-500">${icons.check}</div><span class="text-gray-700">游戏化学习</span></div>
+                  </div>
+                </div>
+                <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-10 border-2 border-blue-200 hover:shadow-2xl transition-all duration-500 hover:-translate-y-3">
+                  <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-2xl flex items-center justify-center mb-8 shadow-lg text-white">
+                    ${icons.graduation}
+                  </div>
+                  <h3 class="text-3xl font-bold text-gray-800 mb-4">口译训练智能体</h3>
+                  <p class="text-gray-600 text-lg leading-relaxed mb-6">
+                    专业的CATTI二级和三级口译训练工具，提供实时反馈、模拟考试和个性化训练方案，助力口译备考。
+                  </p>
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-3"><div class="text-green-500">${icons.check}</div><span class="text-gray-700">真题模拟训练</span></div>
+                    <div class="flex items-center gap-3"><div class="text-green-500">${icons.check}</div><span class="text-gray-700">AI智能评分</span></div>
+                    <div class="flex items-center gap-3"><div class="text-green-500">${icons.check}</div><span class="text-gray-700">实时翻译反馈</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 2:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500 mb-8">
+                少儿英语智能体
+              </h2>
+              <p class="text-xl text-gray-600 mb-12 text-center max-w-3xl">
+                专为儿童设计，让英语学习变得有趣、有效！
+              </p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl">
+                ${[
+                  { icon: icons.message, title: '趣味对话练习', desc: '生动有趣的日常对话，包含问候、购物、旅行等50+场景' },
+                  { icon: icons.book, title: '绘本阅读', desc: '海量英文绘本，AI智能导读，单词解析，发音指导' },
+                  { icon: icons.sparkles, title: '游戏化学习', desc: '趣味闯关模式，收集勋章奖励，激发学习动力' },
+                  { icon: icons.users, title: '角色扮演', desc: '模拟医生、老师、厨师等职业对话，提前体验社会' },
+                  { icon: icons.clock, title: '每日打卡', desc: '养成良好学习习惯，连续打卡获得神秘礼物' },
+                  { icon: icons.award, title: '成就系统', desc: '丰富勋章墙，记录成长历程，激励持续学习' }
+                ].map(item => `
+                  <div class="bg-white rounded-2xl p-8 shadow-xl border-2 border-orange-100 hover:border-orange-300 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-xl flex items-center justify-center mb-6 text-orange-500">
+                      ${item.icon}
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-800 mb-3">${item.title}</h4>
+                    <p class="text-gray-600">${item.desc}</p>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="mt-10 flex gap-6">
+                <div class="bg-orange-100 rounded-xl px-6 py-4 text-center">
+                  <div class="text-3xl font-bold text-orange-600">500+</div>
+                  <div class="text-gray-600 text-sm">学习场景</div>
+                </div>
+                <div class="bg-yellow-100 rounded-xl px-6 py-4 text-center">
+                  <div class="text-3xl font-bold text-yellow-600">1000+</div>
+                  <div class="text-gray-600 text-sm">英文绘本</div>
+                </div>
+                <div class="bg-amber-100 rounded-xl px-6 py-4 text-center">
+                  <div class="text-3xl font-bold text-amber-600">50+</div>
+                  <div class="text-gray-600 text-sm">游戏关卡</div>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 3:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 mb-8">
+                口译训练智能体
+              </h2>
+              <p class="text-xl text-gray-600 mb-12 text-center max-w-3xl">
+                专业口译备考助手，助您顺利通过CATTI考试！
+              </p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl">
+                ${[
+                  { icon: icons.play, title: '实时口译练习', desc: '支持中英双向互译，智能识别发音，即时反馈纠错' },
+                  { icon: icons.target, title: 'CATTI真题模拟', desc: '涵盖二三级历年真题，严格按照官方标准评分' },
+                  { icon: icons.mic, title: '语音识别训练', desc: '专业语音评测，纠正发音语调，提升听力水平' },
+                  { icon: icons.file, title: '笔记技巧指导', desc: '传授高效笔记方法，符号速记技巧，提升记录速度' },
+                  { icon: icons.brain, title: 'AI智能评分', desc: '多维度评估：内容准确度、表达流畅度、专业术语' },
+                  { icon: icons.trending, title: '进步追踪', desc: '详细能力分析报告，薄弱环节诊断，个性化提升建议' }
+                ].map(item => `
+                  <div class="flex gap-6 items-start bg-white rounded-2xl p-8 shadow-xl border-2 border-blue-100">
+                    <div class="w-18 h-18 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shrink-0 text-blue-500">
+                      ${item.icon}
+                    </div>
+                    <div>
+                      <h4 class="text-xl font-bold text-gray-800 mb-3">${item.title}</h4>
+                      <p class="text-gray-600">${item.desc}</p>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="mt-10 grid grid-cols-3 gap-6">
+                <div class="bg-blue-100 rounded-xl px-6 py-4 text-center">
+                  <div class="text-3xl font-bold text-blue-600">88%</div>
+                  <div class="text-gray-600 text-sm">考试通过率</div>
+                </div>
+                <div class="bg-indigo-100 rounded-xl px-6 py-4 text-center">
+                  <div class="text-3xl font-bold text-indigo-600">500+</div>
+                  <div class="text-gray-600 text-sm">真题题库</div>
+                </div>
+                <div class="bg-purple-100 rounded-xl px-6 py-4 text-center">
+                  <div class="text-3xl font-bold text-purple-600">AI</div>
+                  <div class="text-gray-600 text-sm">智能评分系统</div>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 4:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-6xl font-bold text-gray-800 mb-16">核心优势</h2>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-7xl">
+                ${[
+                  { num: '24/7', title: '随时学习', desc: '全天候AI陪伴，碎片化时间高效利用', color: 'from-blue-400 to-cyan-400' },
+                  { num: 'AI', title: '智能适配', desc: 'AI精准分析，个性化学习方案定制', color: 'from-purple-400 to-pink-400' },
+                  { num: '∞', title: '无限练习', desc: '海量训练素材，持续更新免费试用', color: 'from-orange-400 to-yellow-400' },
+                  { num: '✓', title: '专业可靠', desc: '资深教学团队，专业内容审核认证', color: 'from-green-400 to-emerald-400' }
+                ].map(item => `
+                  <div class="bg-gradient-to-br ${item.color} rounded-3xl p-10 text-white hover:scale-105 transition-all duration-300 shadow-xl">
+                    <div class="text-6xl font-extrabold mb-4">${item.num}</div>
+                    <h4 class="text-2xl font-bold mb-3">${item.title}</h4>
+                    <p class="text-white/90">${item.desc}</p>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="mt-16 grid grid-cols-3 gap-8 max-w-5xl">
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 text-center border-2 border-blue-100">
+                  <div class="text-5xl font-bold text-blue-600 mb-3">95%</div>
+                  <p class="text-gray-600 text-lg">少儿用户满意度</p>
+                  <p class="text-gray-500 text-sm mt-2">超过10000名家长推荐</p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 text-center border-2 border-purple-100">
+                  <div class="text-5xl font-bold text-purple-600 mb-3">88%</div>
+                  <p class="text-gray-600 text-lg">口译考试通过率</p>
+                  <p class="text-gray-500 text-sm mt-2">历年通过率统计</p>
+                </div>
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 text-center border-2 border-green-100">
+                  <div class="text-5xl font-bold text-green-600 mb-3">10K+</div>
+                  <p class="text-gray-600 text-lg">活跃学习用户</p>
+                  <p class="text-gray-500 text-sm mt-2">覆盖全国各省市</p>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 5:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-6xl font-bold text-gray-800 mb-16">使用场景</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl">
+                ${[
+                  { title: '居家学习', time: '每天30分钟', desc: '亲子互动时光', color: 'from-blue-400 to-cyan-400', icon: icons.home },
+                  { title: '通勤路上', time: '碎片时间利用', desc: '地铁公交随时学', color: 'from-purple-400 to-pink-400', icon: icons.globe },
+                  { title: '考前冲刺', time: '高效备考训练', desc: '查漏补缺', color: 'from-orange-400 to-yellow-400', icon: icons.target },
+                  { title: '亲子互动', time: '家长陪伴学习', desc: '增进亲子关系', color: 'from-green-400 to-emerald-400', icon: icons.heart },
+                  { title: '口语提升', time: '日常对话练习', desc: '告别哑巴英语', color: 'from-indigo-400 to-violet-400', icon: icons.mic },
+                  { title: '技能强化', time: '专项能力突破', desc: '听说读写全提升', color: 'from-rose-400 to-red-400', icon: icons.trending }
+                ].map(item => `
+                  <div class="bg-gradient-to-br ${item.color} rounded-3xl p-10 text-white hover:scale-105 transition-transform duration-300 shadow-xl">
+                    <div class="mb-6">${item.icon}</div>
+                    <h4 class="text-3xl font-bold mb-3">${item.title}</h4>
+                    <p class="text-xl mb-2">${item.time}</p>
+                    <p class="text-white/80">${item.desc}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+          break;
+
+        case 6:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-6xl font-bold text-gray-800 mb-16">使用流程</h2>
+              <div class="flex items-center justify-center gap-6 max-w-7xl">
+                ${[
+                  { step: '1', title: '注册账号', desc: '手机号一键注册' },
+                  { step: '2', title: '选择产品', desc: '少儿英语/口译训练' },
+                  { step: '3', title: '开始学习', desc: 'AI智能引导学习' },
+                  { step: '4', title: '查看进度', desc: '实时追踪效果' }
+                ].map((item, index) => `
+                  <div class="text-center">
+                    <div class="w-28 h-28 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-5xl font-bold text-white mb-6 mx-auto shadow-xl">
+                      ${item.step}
+                    </div>
+                    <h4 class="text-2xl font-bold text-gray-800 mb-2">${item.title}</h4>
+                    <p class="text-gray-600">${item.desc}</p>
+                  </div>
+                  ${index < 3 ? `<div class="flex flex-col items-center"><div class="text-blue-300">${icons.arrow}</div></div>` : ''}
+                `).join('')}
+              </div>
+              <div class="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-10 max-w-4xl">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">三分钟快速上手</h3>
+                <div class="grid grid-cols-3 gap-6">
+                  <div class="text-center">
+                    <div class="text-4xl font-bold text-blue-500 mb-2">1分钟</div>
+                    <p class="text-gray-600">完成账号注册</p>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-4xl font-bold text-purple-500 mb-2">1分钟</div>
+                    <p class="text-gray-600">选择学习目标</p>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-4xl font-bold text-pink-500 mb-2">1分钟</div>
+                    <p class="text-gray-600">开始第一次学习</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 7:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-6xl font-bold text-gray-800 mb-16">用户反馈</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl">
+                ${[
+                  { name: '王妈妈', role: '8岁孩子家长', text: '孩子以前对英语很抵触，现在每天都主动要学进步非常明显！口语表达自信多了。', color: 'from-orange-50 to-yellow-50', avatar: '👩' },
+                  { name: '李同学', role: 'CATTI三级考生', text: '口译训练功能太棒了！AI评分系统很专业，帮助我顺利通过了三级考试！', color: 'from-blue-50 to-indigo-50', avatar: '👨‍🎓' },
+                  { name: '张老师', role: '中学英语教师', text: '作为老师，我非常推荐！教学效果显著，学生们学习效率大幅提升，成绩进步明显。', color: 'from-purple-50 to-pink-50', avatar: '👩‍🏫' }
+                ].map(item => `
+                  <div class="bg-gradient-to-br ${item.color} rounded-3xl p-10 border-2 border-gray-100 shadow-xl">
+                    <div class="flex items-center gap-4 mb-6">
+                      <div class="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center text-3xl">
+                        ${item.avatar}
+                      </div>
+                      <div>
+                        <div class="font-bold text-gray-800 text-xl">${item.name}</div>
+                        <div class="text-gray-500">${item.role}</div>
+                      </div>
+                    </div>
+                    <div class="flex mb-4">
+                      ${[...Array(5)].map(() => `<div class="text-yellow-400">${icons.star}</div>`).join('')}
+                    </div>
+                    <p class="text-gray-700 text-lg leading-relaxed italic">"${item.text}"</p>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="mt-12 flex gap-6 text-gray-700">
+                <div class="flex items-center gap-2">
+                  <div class="text-green-500">${icons.check}</div>
+                  <span>好评率 98%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="text-blue-500">${icons.award}</div>
+                  <span>用户推荐指数 9.5</span>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+
+        case 8:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <h2 class="text-6xl font-bold text-gray-800 mb-16">价格方案</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl">
+                ${[
+                  { name: '基础版', price: '免费', features: ['每日30分钟学习', '基础对话练习', '10个学习场景', '5本英文绘本', '基础发音评测', '学习进度追踪'], popular: false, color: 'from-gray-400 to-gray-500' },
+                  { name: '专业版', price: '¥99/月', features: ['无限学习时长', '全部功能解锁', '500+学习场景', '1000+英文绘本', 'AI智能评分', '专属学习报告', '优先客服支持', '离线下载功能'], popular: true, color: 'from-blue-500 to-purple-500' },
+                  { name: '企业版', price: '联系我们', features: ['多账号管理', '自定义学习内容', 'API接口接入', '专属培训服务', '数据统计分析', '7*24专属支持', '定制开发服务', '年度套餐优惠'], popular: false, color: 'from-orange-500 to-red-500' }
+                ].map(plan => `
+                  <div class="relative rounded-3xl p-10 transition-all duration-300 ${plan.popular ? `bg-gradient-to-br ${plan.color} text-white scale-105 shadow-2xl` : 'bg-white border-4 border-gray-200 hover:border-blue-300 shadow-xl'}">
+                    ${plan.popular ? '<div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-8 py-2 rounded-full text-lg font-bold shadow-lg">⭐ 最受欢迎</div>' : ''}
+                    <h3 class="text-3xl font-bold mb-4">${plan.name}</h3>
+                    <div class="text-5xl font-extrabold mb-8">${plan.price}</div>
+                    <ul class="space-y-4 mb-10">
+                      ${plan.features.map(f => `<li class="flex items-center gap-3"><div class="${plan.popular ? 'text-yellow-300' : 'text-green-500'}">${icons.check}</div><span class="${plan.popular ? 'text-white/95' : 'text-gray-700'}">${f}</span></li>`).join('')}
+                    </ul>
+                    <button class="w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 ${plan.popular ? 'bg-white text-blue-600 hover:bg-gray-100 shadow-lg' : `bg-gradient-to-r ${plan.color} text-white hover:shadow-xl`}">
+                      ${plan.name === '企业版' ? '获取报价' : '立即购买'}
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+              <p class="mt-8 text-gray-500 text-center">* 所有套餐均支持7天无理由退款</p>
+            </div>
+          `;
+          break;
+
+        case 9:
+          html = `
+            <div class="h-screen flex flex-col items-center justify-center p-8">
+              <div class="text-center max-w-4xl">
+                <div class="flex gap-4 justify-center mb-8">
+                  <div class="text-pink-500">${icons.gift}</div>
+                  <div class="text-yellow-500">${icons.crown}</div>
+                  <div class="text-purple-500">${icons.sparkles}</div>
+                </div>
+                <h2 class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-8">
+                  开始您的英语学习之旅
+                </h2>
+                <p class="text-2xl text-gray-600 mb-12">
+                  立即体验AI智能学习助手，让学习更高效、更有趣！
+                </p>
+                <div class="flex gap-8 justify-center mb-16">
+                  <a href="https://www.coze.cn/s/llxv2V1cxnQ/" target="_blank" class="px-16 py-6 bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-2xl font-bold rounded-2xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                    🧸 少儿英语智能体
+                  </a>
+                  <a href="https://www.coze.cn/s/i-ipKPU1uDk/" target="_blank" class="px-16 py-6 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-2xl font-bold rounded-2xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                    🎓 口译训练智能体
+                  </a>
+                </div>
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl p-10 inline-block">
+                  <h3 class="text-2xl font-bold text-gray-800 mb-6">联系我们</h3>
+                  <div class="space-y-4 text-left">
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl">📧</span>
+                      <span class="text-gray-700">contact@example.com</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl">📱</span>
+                      <span class="text-gray-700">400-888-8888</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl">💬</span>
+                      <span class="text-gray-700">微信公众号: AI英语学习</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-12 text-gray-400">
+                  <p class="text-lg">感谢您的关注与支持！</p>
+                  <p class="text-sm mt-2">让AI成为您英语学习路上的得力助手</p>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+      }
+
+      app.innerHTML = html + `
+        ${currentSlide > 0 ? `
+          <button onclick="prevSlide()" class="absolute left-8 top-1/2 -translate-y-1/2 w-16 h-16 bg-white rounded-full shadow-xl flex items-center justify-center hover:bg-gray-50 hover:scale-110 transition-all duration-300 z-20 border-2 border-gray-200">
+            ${icons.chevronLeft}
+          </button>
+        ` : ''}
+        ${currentSlide < slides.length - 1 ? `
+          <button onclick="nextSlide()" class="absolute right-8 top-1/2 -translate-y-1/2 w-16 h-16 bg-white rounded-full shadow-xl flex items-center justify-center hover:bg-gray-50 hover:scale-110 transition-all duration-300 z-20 border-2 border-gray-200">
+            ${icons.chevronRight}
+          </button>
+        ` : ''}
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
+          ${slides.map((_, index) => `
+            <button onclick="goToSlide(${index})" class="h-3 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-gradient-to-r from-blue-500 to-purple-500 w-12' : 'bg-gray-300 hover:bg-gray-400 w-3'}"></button>
+          `).join('')}
+        </div>
+      `;
+    };
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        renderSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        renderSlide();
+      }
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      renderSlide();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+
+    renderSlide();
+  </script>
+</body>
+</html>
