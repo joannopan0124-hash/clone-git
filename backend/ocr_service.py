@@ -1,54 +1,93 @@
-import pytesseract
-from PIL import Image
-from pdf2image import convert_from_path
-import os
+import cv2
+import numpy as np
+from paddleocr import PaddleOCR
 
 
-def perform_ocr(file_path):
+ocr = None
+
+
+def init_ocr():
+    """初始化PaddleOCR"""
+    global ocr
+    if ocr is None:
+        ocr = PaddleOCR(
+            lang='ch',
+            use_textline_orientation=True
+        )
+    return ocr
+
+
+def perform_ocr(image_path):
     """
-    对文件进行OCR识别
+    使用PaddleOCR对图片进行文字识别
 
     Args:
-        file_path: 文件路径
+        image_path: 图片文件路径
 
     Returns:
-        tuple: (识别出的文本, 置信度)
+        tuple: (识别出的文本, 平均置信度)
     """
-    file_ext = file_path.rsplit('.', 1)[1].lower()
+    ocr = init_ocr()
+    result = ocr.ocr(image_path)
 
-    if file_ext == 'pdf':
-        # PDF文件处理
-        images = convert_from_path(file_path)
-        text_parts = []
-        total_confidence = 0
+    if not result or not result[0]:
+        return '', 0.0
 
-        for image in images:
-            # 使用tesseract进行OCR
-            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-            text = pytesseract.image_to_string(image)
+    ocr_result = result[0]
+    rec_texts = ocr_result.get('rec_texts', [])
+    rec_scores = ocr_result.get('rec_scores', [])
 
-            # 计算平均置信度
-            confidences = [int(conf) for conf in data['conf'] if conf != '-1']
-            avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+    text_parts = []
+    total_confidence = 0
+    count = 0
 
+    for text, score in zip(rec_texts, rec_scores):
+        if text.strip():
             text_parts.append(text)
-            total_confidence += avg_confidence
+            total_confidence += score
+            count += 1
 
-        full_text = '\n'.join(text_parts)
-        avg_confidence = total_confidence / len(images) if images else 0
+    full_text = '\n'.join(text_parts)
+    avg_confidence = total_confidence / count if count > 0 else 0.0
 
-        return full_text, avg_confidence / 100  # 转换为0-1范围
+    return full_text, avg_confidence
 
-    else:
-        # 图片文件处理
-        image = Image.open(file_path)
 
-        # 使用tesseract进行OCR
-        data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-        text = pytesseract.image_to_string(image)
+def perform_ocr_from_bytes(image_bytes):
+    """
+    使用PaddleOCR对图片字节流进行文字识别
 
-        # 计算平均置信度
-        confidences = [int(conf) for conf in data['conf'] if conf != '-1']
-        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+    Args:
+        image_bytes: 图片字节数据
 
-        return text, avg_confidence / 100  # 转换为0-1范围
+    Returns:
+        tuple: (识别出的文本, 平均置信度)
+    """
+    ocr = init_ocr()
+
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    result = ocr.ocr(img)
+
+    if not result or not result[0]:
+        return '', 0.0
+
+    ocr_result = result[0]
+    rec_texts = ocr_result.get('rec_texts', [])
+    rec_scores = ocr_result.get('rec_scores', [])
+
+    text_parts = []
+    total_confidence = 0
+    count = 0
+
+    for text, score in zip(rec_texts, rec_scores):
+        if text.strip():
+            text_parts.append(text)
+            total_confidence += score
+            count += 1
+
+    full_text = '\n'.join(text_parts)
+    avg_confidence = total_confidence / count if count > 0 else 0.0
+
+    return full_text, avg_confidence
