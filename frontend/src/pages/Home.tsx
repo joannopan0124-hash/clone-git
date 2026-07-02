@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, Languages, Loader2, Copy, Check } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
-import TranslationPanel from '@/components/TranslationPanel';
-import ResultDisplay from '@/components/ResultDisplay';
 import RealtimeSubtitle from '@/components/RealtimeSubtitle';
 import { uploadFile, performOCR, translateText } from '@/services/api';
+
+const LANGUAGES = [
+  { code: 'en', name: '英文' },
+  { code: 'zh', name: '中文' },
+  { code: 'ja', name: '日文' },
+  { code: 'ko', name: '韩文' },
+  { code: 'fr', name: '法文' },
+  { code: 'de', name: '德文' },
+];
 
 export default function Home() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -18,11 +25,16 @@ export default function Home() {
   const [isRecognizing, setIsRecognizing] = useState<boolean>(false);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [copiedOriginal, setCopiedOriginal] = useState(false);
+  const [copiedTranslation, setCopiedTranslation] = useState(false);
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
     setError('');
     setIsUploading(true);
+    setOriginalText('');
+    setTranslatedText('');
+    setConfidence(0);
 
     try {
       // 上传文件
@@ -48,7 +60,6 @@ export default function Home() {
       setError(err.message || '处理文件时出错');
       setIsUploading(false);
       setIsRecognizing(false);
-      // 保留上传文件状态，方便用户查看错误信息
     }
   };
 
@@ -66,6 +77,7 @@ export default function Home() {
 
     setError('');
     setIsTranslating(true);
+    setTranslatedText('');
 
     try {
       const translateResponse = await translateText(originalText, sourceLang, targetLang);
@@ -78,6 +90,17 @@ export default function Home() {
     } catch (err: any) {
       setError(err.message || '翻译时出错');
       setIsTranslating(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, type: 'original' | 'translation') => {
+    await navigator.clipboard.writeText(text);
+    if (type === 'original') {
+      setCopiedOriginal(true);
+      setTimeout(() => setCopiedOriginal(false), 2000);
+    } else {
+      setCopiedTranslation(true);
+      setTimeout(() => setCopiedTranslation(false), 2000);
     }
   };
 
@@ -122,7 +145,7 @@ export default function Home() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <span className="text-2xl">📤</span>
-              上传文件
+              第一步：上传图片
             </h2>
             <FileUpload
               onFileUpload={handleFileUpload}
@@ -132,35 +155,168 @@ export default function Home() {
             />
             {isRecognizing && (
               <div className="mt-4 flex items-center justify-center gap-2 text-blue-600">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                <span>正在识别文件内容...</span>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>正在识别图片中的文字...</span>
               </div>
             )}
           </div>
 
-          {/* 翻译面板 */}
-          {uploadedFile && originalText && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <TranslationPanel
-                sourceLang={sourceLang}
-                targetLang={targetLang}
-                onSourceLangChange={setSourceLang}
-                onTargetLangChange={setTargetLang}
-                onTranslate={handleTranslate}
-                isTranslating={isTranslating}
-                hasFile={!!uploadedFile}
-                hasText={!!originalText}
-              />
+          {/* OCR识别结果 + 翻译区域 */}
+          {originalText && (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              {/* 头部 */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">📝</span>
+                  第二步：翻译文字
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  已识别出文字，请选择语言后点击翻译按钮
+                </p>
+              </div>
+
+              {/* 语言选择 + 翻译按钮 */}
+              <div className="p-4 bg-gray-50 border-b">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex-1 w-full">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      源语言
+                    </label>
+                    <select
+                      value={sourceLang}
+                      onChange={(e) => setSourceLang(e.target.value)}
+                      disabled={isTranslating}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-center pt-5">
+                    <span className="text-2xl text-gray-400">→</span>
+                  </div>
+
+                  <div className="flex-1 w-full">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      目标语言
+                    </label>
+                    <select
+                      value={targetLang}
+                      onChange={(e) => setTargetLang(e.target.value)}
+                      disabled={isTranslating}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pt-5">
+                    <button
+                      onClick={handleTranslate}
+                      disabled={isTranslating || !originalText}
+                      className={`
+                        flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all
+                        ${isTranslating || !originalText
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl active:scale-95'
+                        }
+                      `}
+                    >
+                      {isTranslating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          翻译中...
+                        </>
+                      ) : (
+                        <>
+                          <Languages className="w-5 h-5" />
+                          开始翻译
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 原文 + 译文 对比展示 */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+                {/* 原文 */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between p-3 bg-gray-100 border-b">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-700">原文</span>
+                      {confidence > 0 && (
+                        <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                          识别度 {(confidence * 100).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(originalText, 'original')}
+                      className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      {copiedOriginal ? (
+                        <Check className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                      <span className="text-xs">{copiedOriginal ? '已复制' : '复制'}</span>
+                    </button>
+                  </div>
+                  <div className="p-4 bg-white min-h-[200px] max-h-[400px] overflow-y-auto">
+                    <p className="text-gray-800 whitespace-pre-wrap">{originalText}</p>
+                  </div>
+                </div>
+
+                {/* 译文 */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between p-3 bg-blue-50 border-b">
+                    <span className="font-medium text-blue-700">译文</span>
+                    <button
+                      onClick={() => translatedText && copyToClipboard(translatedText, 'translation')}
+                      disabled={!translatedText}
+                      className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-blue-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {copiedTranslation ? (
+                        <Check className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                      <span className="text-xs">{copiedTranslation ? '已复制' : '复制'}</span>
+                    </button>
+                  </div>
+                  <div className="p-4 bg-white min-h-[200px] max-h-[400px] overflow-y-auto">
+                    {isTranslating ? (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                        <span>正在翻译...</span>
+                      </div>
+                    ) : translatedText ? (
+                      <p className="text-gray-800 whitespace-pre-wrap">{translatedText}</p>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        <p>点击「开始翻译」按钮获取译文</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* 结果展示 */}
-          {originalText && translatedText && (
-            <ResultDisplay
-              originalText={originalText}
-              translatedText={translatedText}
-              confidence={confidence}
-            />
+          {/* 上传提示 */}
+          {!uploadedFile && !isRecognizing && (
+            <div className="text-center text-gray-500 py-8">
+              <p className="text-lg">👆 上传一张包含文字的图片开始翻译</p>
+            </div>
           )}
         </div>
       </main>
