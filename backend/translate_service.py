@@ -1965,6 +1965,34 @@ class VolcEngineTranslator:
         """
         # 模拟模式：优先尝试免费在线翻译API，失败再回退到本地模拟翻译
         if self.simulation_mode:
+            # 对长文本按句子分割逐句翻译，确保每句都被正确处理
+            if len(text) > 200:
+                sentences = re.split(r'(?<=[.!?\n])\s+', text)
+                translated_sentences = []
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if not sentence:
+                        continue
+                    
+                    # 1. 优先尝试 LibreTranslate（用户指定的免费API）
+                    libre_result = _call_libretranslate(sentence, source_lang or 'en', target_lang)
+                    if libre_result and not _is_mostly_english(libre_result):
+                        translated_sentences.append(libre_result)
+                        continue
+
+                    # 2. LibreTranslate失败，尝试 MyMemory 备用API
+                    mymemory_result = _call_mymemory(sentence, source_lang or 'en', target_lang)
+                    if mymemory_result and not _is_mostly_english(mymemory_result):
+                        translated_sentences.append(mymemory_result)
+                        continue
+
+                    # 3. 在线API都失败，回退到本地模拟翻译
+                    local_result = self._simulate_translate(sentence, source_lang or 'en', target_lang)
+                    translated_sentences.append(local_result)
+                
+                return ' '.join(translated_sentences)
+            
+            # 短文本直接翻译
             # 1. 优先尝试 LibreTranslate（用户指定的免费API）
             libre_result = _call_libretranslate(text, source_lang or 'en', target_lang)
             if libre_result:
