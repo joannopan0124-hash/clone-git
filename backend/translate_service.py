@@ -1,7 +1,7 @@
 """
 翻译服务模块
 
-支持火山引擎机器翻译API，未配置密钥时使用模拟翻译模式
+支持火山引擎机器翻译API，未配置密钥时使用免费在线翻译API + 模拟翻译回退
 文档: https://www.volcengine.com/docs/4640/65067
 
 支持术语表功能，作为翻译记忆库使用
@@ -16,6 +16,60 @@ import hashlib
 import hmac
 import urllib.parse
 from glossary_service import apply_glossary_to_translation, restore_glossary_terms
+
+
+# 免费在线翻译API（无需密钥）
+FREE_TRANSLATE_URL = 'https://api.mymemory.translated.net/get'
+
+# 语言代码映射到 MyMemory 使用的格式
+MYMEMORY_LANG_MAP = {
+    'zh': 'zh-CN',
+    'en': 'en',
+    'ja': 'ja',
+    'ko': 'ko',
+    'fr': 'fr',
+    'de': 'de',
+    'es': 'es',
+    'pt': 'pt',
+    'ru': 'ru',
+    'it': 'it',
+}
+
+
+def _call_free_translate(text, source_lang, target_lang):
+    """
+    调用免费在线翻译API（MyMemory）
+    无需API密钥，每日有免费额度
+
+    Args:
+        text: 待翻译文本
+        source_lang: 源语言代码
+        target_lang: 目标语言代码
+
+    Returns:
+        str: 翻译结果，失败时返回 None
+    """
+    src = MYMEMORY_LANG_MAP.get(source_lang, source_lang)
+    dst = MYMEMORY_LANG_MAP.get(target_lang, target_lang)
+
+    params = {
+        'q': text,
+        'langpair': f'{src}|{dst}',
+    }
+
+    try:
+        response = requests.get(FREE_TRANSLATE_URL, params=params, timeout=15)
+        if response.status_code != 200:
+            return None
+
+        data = response.json()
+        translated = data.get('responseData', {}).get('translatedText')
+        if translated and data.get('responseStatus') == 200:
+            return translated
+        return None
+    except Exception as e:
+        print(f'免费翻译API调用失败: {e}')
+        return None
 
 
 class VolcEngineTranslator:
@@ -39,7 +93,7 @@ class VolcEngineTranslator:
         self.simulation_mode = False
 
         if not self.access_key or not self.secret_key:
-            print('警告: 未配置火山引擎API密钥，将使用模拟翻译模式')
+            print('警告: 未配置火山引擎API密钥，将使用免费在线翻译 + 模拟翻译回退')
             self.simulation_mode = True
 
     def _sign_request(self, method, path, query, body):
@@ -1372,10 +1426,16 @@ class VolcEngineTranslator:
         Raises:
             Exception: 翻译失败时抛出异常
         """
-        # 模拟模式
+        # 模拟模式：先尝试免费在线翻译API，失败再回退到本地模拟翻译
         if self.simulation_mode:
+            # 1. 优先尝试免费在线翻译API
+            online_result = _call_free_translate(text, source_lang or 'en', target_lang)
+            if online_result:
+                return online_result
+
+            # 2. 在线API失败，回退到本地模拟翻译
             import time
-            time.sleep(0.5)  # 模拟网络延迟
+            time.sleep(0.3)
             return self._simulate_translate(text, source_lang or 'en', target_lang)
 
         method = 'POST'

@@ -61,6 +61,11 @@ export default function Home() {
       setOriginalText(ocrResponse.text);
       setConfidence(ocrResponse.confidence);
       setIsRecognizing(false);
+
+      // OCR成功后自动调用翻译接口
+      if (ocrResponse.text && ocrResponse.text.trim()) {
+        await autoTranslate(ocrResponse.text, sourceLang, targetLang);
+      }
     } catch (err: any) {
       setError(err.message || '处理文件时出错');
       setIsUploading(false);
@@ -77,15 +82,15 @@ export default function Home() {
     setError('');
   };
 
-  const handleTranslate = async () => {
-    if (!originalText) return;
+  const autoTranslate = async (text: string, srcLang: string, tgtLang: string) => {
+    if (!text || !text.trim()) return;
 
     setError('');
     setIsTranslating(true);
     setTranslatedText('');
 
     try {
-      const translateResponse = await translateText(originalText, sourceLang, targetLang);
+      const translateResponse = await translateText(text, srcLang, tgtLang);
       if (!translateResponse.success) {
         throw new Error(translateResponse.message);
       }
@@ -94,9 +99,15 @@ export default function Home() {
       setIsSimulation(translateResponse.simulation || false);
       setIsTranslating(false);
     } catch (err: any) {
-      setError(err.message || '翻译时出错');
+      setError('翻译失败: ' + (err.message || '未知错误'));
       setIsTranslating(false);
     }
+  };
+
+  const handleTranslate = async () => {
+    if (!originalText) return;
+
+    await autoTranslate(originalText, sourceLang, targetLang);
   };
 
   const handleQuickTranslate = async () => {
@@ -115,7 +126,7 @@ export default function Home() {
       setQuickTestSimulation(translateResponse.simulation || false);
       setIsQuickTranslating(false);
     } catch (err: any) {
-      setQuickTestResult('翻译失败: ' + (err.message || '未知错误'));
+      setError('快速翻译失败: ' + (err.message || '未知错误'));
       setIsQuickTranslating(false);
     }
   };
@@ -155,8 +166,15 @@ export default function Home() {
         <div className="space-y-6">
           {/* 错误提示 */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700 font-medium">{error}</p>
+            <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+              <div className="flex-shrink-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">!</div>
+              <p className="text-red-700 font-medium flex-1">{error}</p>
+              <button
+                onClick={() => setError('')}
+                className="flex-shrink-0 text-red-400 hover:text-red-600 text-xl leading-none"
+              >
+                ×
+              </button>
             </div>
           )}
 
