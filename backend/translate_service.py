@@ -673,8 +673,8 @@ class VolcEngineTranslator:
             'import': '导入',
             # 代词和冠词
             'the': '',
-            'a': '一个',
-            'an': '一个',
+            'a': '',
+            'an': '',
             'i': '我',
             'me': '我',
             'my': '我的',
