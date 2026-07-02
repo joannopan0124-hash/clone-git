@@ -5,6 +5,14 @@ import uuid
 from werkzeug.utils import secure_filename
 from ocr_service import perform_ocr, perform_ocr_from_bytes, init_ocr
 from translate_service import translate_text
+from glossary_service import (
+    get_glossary_list,
+    add_glossary_term,
+    update_glossary_term,
+    delete_glossary_term,
+    import_glossary,
+    export_glossary
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -113,7 +121,7 @@ def ocr():
 
 @app.route('/api/translate', methods=['POST'])
 def translate():
-    """翻译API"""
+    """翻译API（支持术语表）"""
     data = request.json
 
     if not data or 'text' not in data or 'sourceLang' not in data or 'targetLang' not in data:
@@ -126,16 +134,18 @@ def translate():
     text = data['text']
     source_lang = data['sourceLang']
     target_lang = data['targetLang']
+    use_glossary = data.get('useGlossary', True)
 
     try:
-        translated_text = translate_text(text, source_lang, target_lang)
+        result = translate_text(text, source_lang, target_lang, use_glossary)
 
         return jsonify({
             'success': True,
             'originalText': text,
-            'translatedText': translated_text,
+            'translatedText': result['translation'],
             'sourceLang': source_lang,
             'targetLang': target_lang,
+            'glossaryMatches': result['glossary_matches'],
             'message': '翻译成功'
         })
     except Exception as e:
@@ -143,6 +153,187 @@ def translate():
             'success': False,
             'error_code': 'TRANSLATE_FAILED',
             'message': f'翻译失败: {str(e)}'
+        }), 500
+
+
+# ==================== 术语表管理API ====================
+
+@app.route('/api/glossary', methods=['GET'])
+def get_glossary():
+    """获取术语表列表"""
+    source_lang = request.args.get('sourceLang')
+    target_lang = request.args.get('targetLang')
+
+    try:
+        glossary = get_glossary_list(source_lang, target_lang)
+
+        return jsonify({
+            'success': True,
+            'glossary': glossary,
+            'count': len(glossary),
+            'message': '获取术语表成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'GET_GLOSSARY_FAILED',
+            'message': f'获取术语表失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/glossary', methods=['POST'])
+def add_glossary():
+    """添加术语"""
+    data = request.json
+
+    if not data or 'sourceTerm' not in data or 'targetTerm' not in data or 'sourceLang' not in data or 'targetLang' not in data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少必要参数: sourceTerm, targetTerm, sourceLang, targetLang'
+        }), 400
+
+    try:
+        term = add_glossary_term(
+            source_term=data['sourceTerm'],
+            target_term=data['targetTerm'],
+            source_lang=data['sourceLang'],
+            target_lang=data['targetLang'],
+            description=data.get('description', ''),
+            case_sensitive=data.get('caseSensitive', False),
+            priority=data.get('priority', 0)
+        )
+
+        return jsonify({
+            'success': True,
+            'term': term,
+            'message': '添加术语成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'ADD_GLOSSARY_FAILED',
+            'message': f'添加术语失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/glossary/<term_id>', methods=['PUT'])
+def update_glossary(term_id):
+    """更新术语"""
+    data = request.json
+
+    if not data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少更新参数'
+        }), 400
+
+    try:
+        term = update_glossary_term(
+            term_id=term_id,
+            source_term=data.get('sourceTerm'),
+            target_term=data.get('targetTerm'),
+            source_lang=data.get('sourceLang'),
+            target_lang=data.get('targetLang'),
+            description=data.get('description'),
+            case_sensitive=data.get('caseSensitive'),
+            priority=data.get('priority')
+        )
+
+        if term:
+            return jsonify({
+                'success': True,
+                'term': term,
+                'message': '更新术语成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error_code': 'TERM_NOT_FOUND',
+                'message': '术语不存在'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'UPDATE_GLOSSARY_FAILED',
+            'message': f'更新术语失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/glossary/<term_id>', methods=['DELETE'])
+def delete_glossary(term_id):
+    """删除术语"""
+    try:
+        success = delete_glossary_term(term_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': '删除术语成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error_code': 'TERM_NOT_FOUND',
+                'message': '术语不存在'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'DELETE_GLOSSARY_FAILED',
+            'message': f'删除术语失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/glossary/import', methods=['POST'])
+def import_glossary_api():
+    """批量导入术语"""
+    data = request.json
+
+    if not data or 'terms' not in data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少术语列表'
+        }), 400
+
+    try:
+        count = import_glossary(data['terms'])
+
+        return jsonify({
+            'success': True,
+            'importedCount': count,
+            'message': f'成功导入 {count} 个术语'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'IMPORT_GLOSSARY_FAILED',
+            'message': f'导入术语失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/glossary/export', methods=['GET'])
+def export_glossary_api():
+    """导出术语表"""
+    source_lang = request.args.get('sourceLang')
+    target_lang = request.args.get('targetLang')
+
+    try:
+        glossary = export_glossary(source_lang, target_lang)
+
+        return jsonify({
+            'success': True,
+            'glossary': glossary,
+            'count': len(glossary),
+            'message': '导出术语表成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'EXPORT_GLOSSARY_FAILED',
+            'message': f'导出术语表失败: {str(e)}'
         }), 500
 
 

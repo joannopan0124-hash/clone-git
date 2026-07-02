@@ -3,6 +3,8 @@
 
 使用火山引擎机器翻译API进行文本翻译
 文档: https://www.volcengine.com/docs/4640/65067
+
+支持术语表功能，作为翻译记忆库使用
 """
 
 import os
@@ -12,6 +14,7 @@ from datetime import datetime
 import hashlib
 import hmac
 import urllib.parse
+from glossary_service import apply_glossary_to_translation, restore_glossary_terms
 
 
 class VolcEngineTranslator:
@@ -154,17 +157,20 @@ def init_translator():
     return translator
 
 
-def translate_text(text, source_lang, target_lang):
+def translate_text(text, source_lang, target_lang, use_glossary=True):
     """
-    翻译文本
+    翻译文本（支持术语表）
 
     Args:
         text: 待翻译文本
         source_lang: 源语言代码
         target_lang: 目标语言代码
+        use_glossary: 是否使用术语表（默认True）
 
     Returns:
-        str: 翻译后的文本
+        dict: 包含翻译结果和术语匹配信息
+            - translation: 翻译后的文本
+            - glossary_matches: 匹配的术语列表
     """
     t = init_translator()
 
@@ -192,6 +198,50 @@ def translate_text(text, source_lang, target_lang):
 
     # 如果源语言和目标语言相同，直接返回原文
     if volc_source and volc_source == volc_target:
-        return text
+        return {
+            'translation': text,
+            'glossary_matches': []
+        }
 
-    return t.translate(text, volc_source, volc_target)
+    # 应用术语表预处理
+    term_mapping = {}
+    processed_text = text
+    glossary_matches = []
+
+    if use_glossary:
+        processed_text, term_mapping = apply_glossary_to_translation(text, source_lang, target_lang)
+
+    # 调用翻译API
+    translated_text = t.translate(processed_text, volc_source, volc_target)
+
+    # 还原术语
+    if term_mapping:
+        translated_text = restore_glossary_terms(translated_text, term_mapping)
+
+    # 收集匹配的术语信息
+    if term_mapping:
+        from glossary_service import get_glossary_list
+        all_terms = get_glossary_list(source_lang, target_lang)
+        matched_source_terms = []
+        for term in all_terms:
+            if any(placeholder.replace('__GLOSSARY_', '').replace('__', '') in str(term_mapping.keys()) for placeholder in term_mapping.keys()):
+                matched_source_terms.append({
+                    'source_term': term['source_term'],
+                    'target_term': term['target_term'],
+                    'id': term['id']
+                })
+        # 通过原文检查匹配
+        for term in all_terms:
+            import re
+            flags = 0 if term.get('case_sensitive', False) else re.IGNORECASE
+            if re.search(r'\b' + re.escape(term['source_term']) + r'\b', text, flags):
+                glossary_matches.append({
+                    'source_term': term['source_term'],
+                    'target_term': term['target_term'],
+                    'id': term['id']
+                })
+
+    return {
+        'translation': translated_text,
+        'glossary_matches': glossary_matches
+    }
