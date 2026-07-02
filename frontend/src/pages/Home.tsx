@@ -48,7 +48,7 @@ export default function Home() {
       setError(err.message || '处理文件时出错');
       setIsUploading(false);
       setIsRecognizing(false);
-      setUploadedFile(null);
+      // 保留上传文件状态，方便用户查看错误信息
     }
   };
 

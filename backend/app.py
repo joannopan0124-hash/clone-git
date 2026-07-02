@@ -74,55 +74,85 @@ def upload_file():
 
 @app.route('/api/ocr', methods=['POST'])
 def ocr():
-    """OCR识别API - 接受图片上传"""
+    """OCR识别API - 支持文件上传和文件路径两种方式"""
+    # 方式1: 直接接收文件上传 (form-data)
     file = request.files.get('file') or request.files.get('image')
-
-    if not file:
-        return jsonify({
-            'success': False,
-            'error_code': 'NO_FILE',
-            'message': '缺少图片文件，请通过form-data上传文件'
-        }), 400
-
-    if file.filename == '':
-        return jsonify({
-            'success': False,
-            'error_code': 'EMPTY_FILENAME',
-            'message': '没有选择文件'
-        }), 400
-
-    file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-    if file_ext not in {'png', 'jpg', 'jpeg'}:
-        return jsonify({
-            'success': False,
-            'error_code': 'INVALID_FORMAT',
-            'message': '不支持的文件格式，仅支持PNG和JPG图片'
-        }), 400
-
-    try:
-        image_bytes = file.read()
-
-        if len(image_bytes) == 0:
+    
+    if file:
+        if file.filename == '':
             return jsonify({
                 'success': False,
-                'error_code': 'EMPTY_FILE',
-                'message': '文件内容为空'
+                'error_code': 'EMPTY_FILENAME',
+                'message': '没有选择文件'
             }), 400
 
-        text, confidence = perform_ocr_from_bytes(image_bytes)
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        if file_ext not in {'png', 'jpg', 'jpeg'}:
+            return jsonify({
+                'success': False,
+                'error_code': 'INVALID_FORMAT',
+                'message': '不支持的文件格式，仅支持PNG和JPG图片'
+            }), 400
 
-        return jsonify({
-            'success': True,
-            'text': text,
-            'confidence': confidence,
-            'message': 'OCR识别成功'
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error_code': 'OCR_FAILED',
-            'message': f'OCR识别失败: {str(e)}'
-        }), 500
+        try:
+            image_bytes = file.read()
+
+            if len(image_bytes) == 0:
+                return jsonify({
+                    'success': False,
+                    'error_code': 'EMPTY_FILE',
+                    'message': '文件内容为空'
+                }), 400
+
+            text, confidence = perform_ocr_from_bytes(image_bytes)
+
+            return jsonify({
+                'success': True,
+                'text': text,
+                'confidence': confidence,
+                'message': 'OCR识别成功'
+            })
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error_code': 'OCR_FAILED',
+                'message': f'OCR识别失败: {str(e)}'
+            }), 500
+    
+    # 方式2: 接收文件路径 (JSON)
+    data = request.get_json(silent=True)
+    if data and 'filePath' in data:
+        file_path = data['filePath']
+        
+        if not os.path.exists(file_path):
+            return jsonify({
+                'success': False,
+                'error_code': 'FILE_NOT_FOUND',
+                'message': '文件不存在'
+            }), 404
+        
+        try:
+            text, confidence = perform_ocr(file_path)
+            
+            return jsonify({
+                'success': True,
+                'text': text,
+                'confidence': confidence,
+                'message': 'OCR识别成功'
+            })
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error_code': 'OCR_FAILED',
+                'message': f'OCR识别失败: {str(e)}'
+            }), 500
+    
+    # 没有提供文件或路径
+    return jsonify({
+        'success': False,
+        'error_code': 'NO_FILE',
+        'message': '缺少文件或文件路径，请通过form-data上传文件或通过JSON传入filePath'
+    }), 400
 
 
 @app.route('/api/translate', methods=['POST'])
