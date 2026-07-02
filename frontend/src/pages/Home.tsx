@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
 import TranslationPanel from '@/components/TranslationPanel';
 import ResultDisplay from '@/components/ResultDisplay';
+import RealtimeSubtitle from '@/components/RealtimeSubtitle';
 import { uploadFile, performOCR, translateText } from '@/services/api';
 
 export default function Home() {
@@ -92,7 +93,7 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">文档翻译系统</h1>
-                <p className="text-sm text-gray-500">支持图片和PDF文件翻译</p>
+                <p className="text-sm text-gray-500">支持图片/PDF翻译 + 实时语音字幕</p>
               </div>
             </div>
           </div>
@@ -108,6 +109,14 @@ export default function Home() {
               <p className="text-red-700 font-medium">{error}</p>
             </div>
           )}
+
+          {/* 实时字幕区域 */}
+          <RealtimeSubtitle
+            sourceLang={sourceLang}
+            targetLang={targetLang}
+            onSourceLangChange={setSourceLang}
+            onTargetLangChange={setTargetLang}
+          />
 
           {/* 文件上传区域 */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -160,7 +169,7 @@ export default function Home() {
       <footer className="bg-gray-50 border-t mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <p className="text-center text-sm text-gray-500">
-            文档翻译系统 © 2026 - 支持图片和PDF文件翻译
+            文档翻译系统 © 2026 - 支持图片/PDF翻译 + 实时语音字幕
           </p>
         </div>
       </footer>

@@ -24,6 +24,43 @@ export interface TranslateResponse {
   translatedText: string;
   sourceLang: string;
   targetLang: string;
+  glossaryMatches: Array<{
+    source_term: string;
+    target_term: string;
+    id: string;
+  }>;
+  message: string;
+}
+
+export interface SpeechStartResponse {
+  success: boolean;
+  taskId: string;
+  sourceLang: string;
+  targetLang: string;
+  simulation: boolean;
+  message: string;
+}
+
+export interface SpeechStopResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface SubtitleResponse {
+  success: boolean;
+  taskId: string;
+  subtitles: Array<{
+    type: string;
+    task_id: string;
+    sentence_index: number;
+    original_text: string;
+    translated_text: string;
+    source_lang: string;
+    target_lang: string;
+    timestamp: string;
+    is_final: boolean;
+  }>;
+  count: number;
   message: string;
 }
 
@@ -61,6 +98,35 @@ export const translateText = async (
     sourceLang,
     targetLang,
   });
+
+  return response.data;
+};
+
+// ==================== 语音翻译API ====================
+
+// 启动实时语音翻译
+export const startSpeechTranslation = async (
+  sourceLang: string,
+  targetLang: string
+): Promise<SpeechStartResponse> => {
+  const response = await axios.post<SpeechStartResponse>(`${API_BASE_URL}/speech/start`, {
+    sourceLang,
+    targetLang,
+  });
+
+  return response.data;
+};
+
+// 停止实时语音翻译
+export const stopSpeechTranslation = async (taskId: string): Promise<SpeechStopResponse> => {
+  const response = await axios.post<SpeechStopResponse>(`${API_BASE_URL}/speech/stop/${taskId}`);
+
+  return response.data;
+};
+
+// 获取字幕历史记录
+export const getSubtitles = async (taskId: string): Promise<SubtitleResponse> => {
+  const response = await axios.get<SubtitleResponse>(`${API_BASE_URL}/speech/subtitles/${taskId}`);
 
   return response.data;
 };

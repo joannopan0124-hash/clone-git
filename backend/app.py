@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import uuid
+import json
 from werkzeug.utils import secure_filename
 from ocr_service import perform_ocr, perform_ocr_from_bytes, init_ocr
 from translate_service import translate_text
@@ -12,6 +13,11 @@ from glossary_service import (
     delete_glossary_term,
     import_glossary,
     export_glossary
+)
+from speech_service import (
+    init_speech_translator,
+    start_realtime_translation,
+    stop_realtime_translation
 )
 
 app = Flask(__name__)
@@ -337,6 +343,136 @@ def export_glossary_api():
         }), 500
 
 
+# ==================== 实时语音翻译API ====================
+
+# 存储活跃的语音翻译任务
+active_speech_tasks = {}
+# 存储字幕历史记录
+subtitle_history = {}
+
+
+@app.route('/api/speech/start', methods=['POST'])
+def start_speech_translation():
+    """启动实时语音翻译"""
+    data = request.json
+
+    if not data or 'sourceLang' not in data or 'targetLang' not in data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少必要参数: sourceLang, targetLang'
+        }), 400
+
+    source_lang = data['sourceLang']
+    target_lang = data['targetLang']
+
+    try:
+        # 定义回调函数，收集字幕
+        def subtitle_callback(result):
+            task_id = result.get('task_id')
+            if task_id not in subtitle_history:
+                subtitle_history[task_id] = []
+            subtitle_history[task_id].append(result)
+            # 保持最近50条记录
+            if len(subtitle_history[task_id]) > 50:
+                subtitle_history[task_id] = subtitle_history[task_id][-50:]
+
+        task_info = start_realtime_translation(
+            source_lang=source_lang,
+            target_lang=target_lang,
+            callback=subtitle_callback
+        )
+
+        active_speech_tasks[task_info['task_id']] = {
+            'source_lang': source_lang,
+            'target_lang': target_lang,
+            'status': 'running'
+        }
+
+        return jsonify({
+            'success': True,
+            'taskId': task_info['task_id'],
+            'sourceLang': source_lang,
+            'targetLang': target_lang,
+            'simulation': task_info.get('simulation', False),
+            'message': '实时语音翻译已启动'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'START_SPEECH_FAILED',
+            'message': f'启动实时语音翻译失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/speech/stop/<task_id>', methods=['POST'])
+def stop_speech_translation(task_id):
+    """停止实时语音翻译"""
+    try:
+        if task_id in active_speech_tasks:
+            stop_realtime_translation(task_id)
+            active_speech_tasks[task_id]['status'] = 'stopped'
+            del active_speech_tasks[task_id]
+
+            return jsonify({
+                'success': True,
+                'message': '实时语音翻译已停止'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error_code': 'TASK_NOT_FOUND',
+                'message': '任务不存在或已结束'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'STOP_SPEECH_FAILED',
+            'message': f'停止实时语音翻译失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/speech/subtitles/<task_id>', methods=['GET'])
+def get_subtitles(task_id):
+    """获取字幕历史记录"""
+    try:
+        if task_id in subtitle_history:
+            subtitles = subtitle_history[task_id]
+            return jsonify({
+                'success': True,
+                'taskId': task_id,
+                'subtitles': subtitles,
+                'count': len(subtitles),
+                'message': '获取字幕成功'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'taskId': task_id,
+                'subtitles': [],
+                'count': 0,
+                'message': '暂无字幕记录'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'GET_SUBTITLES_FAILED',
+            'message': f'获取字幕失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/speech/status', methods=['GET'])
+def get_speech_status():
+    """获取语音翻译任务状态"""
+    return jsonify({
+        'success': True,
+        'activeTasks': len(active_speech_tasks),
+        'tasks': list(active_speech_tasks.keys()),
+        'message': '获取状态成功'
+    })
+
+
 if __name__ == '__main__':
     init_ocr()
+    init_speech_translator()
     app.run(debug=True, port=5000)
