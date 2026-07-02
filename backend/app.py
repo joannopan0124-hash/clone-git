@@ -182,6 +182,7 @@ def translate():
             'sourceLang': source_lang,
             'targetLang': target_lang,
             'glossaryMatches': result['glossary_matches'],
+            'simulation': result.get('simulation', False),
             'message': '翻译成功'
         })
     except Exception as e:

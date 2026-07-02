@@ -1,7 +1,7 @@
 """
-火山引擎翻译服务模块
+翻译服务模块
 
-使用火山引擎机器翻译API进行文本翻译
+支持火山引擎机器翻译API，未配置密钥时使用模拟翻译模式
 文档: https://www.volcengine.com/docs/4640/65067
 
 支持术语表功能，作为翻译记忆库使用
@@ -10,6 +10,7 @@
 import os
 import json
 import requests
+import random
 from datetime import datetime
 import hashlib
 import hmac
@@ -35,9 +36,11 @@ class VolcEngineTranslator:
         self.service = 'translate'
         self.version = '2020-06-01'
         self.action = 'TranslateText'
+        self.simulation_mode = False
 
         if not self.access_key or not self.secret_key:
-            raise ValueError('请配置火山引擎API密钥，设置环境变量 VOLC_ACCESS_KEY 和 VOLC_SECRET_KEY')
+            print('警告: 未配置火山引擎API密钥，将使用模拟翻译模式')
+            self.simulation_mode = True
 
     def _sign_request(self, method, path, query, body):
         """
@@ -88,6 +91,109 @@ class VolcEngineTranslator:
 
         return headers
 
+    def _simulate_translate(self, text, source_lang, target_lang):
+        """
+        模拟翻译（用于演示）
+
+        Args:
+            text: 待翻译文本
+            source_lang: 源语言
+            target_lang: 目标语言
+
+        Returns:
+            str: 模拟翻译结果
+        """
+        # 简单的模拟翻译
+        if source_lang == 'zh' and target_lang == 'en':
+            # 中译英模拟
+            translations = {
+                '你好': 'Hello',
+                '世界': 'world',
+                '欢迎': 'Welcome',
+                '翻译': 'Translation',
+                '系统': 'System',
+                '图片': 'Image',
+                '文字': 'Text',
+                '识别': 'Recognition',
+                '文档': 'Document',
+                '技术': 'Technology',
+                '的': 'the',
+                '是': 'is',
+                '一': 'a',
+                '个': '',
+                '我': 'I',
+                '们': 'we',
+                '在': 'in',
+                '和': 'and',
+                '与': 'with',
+                '了': '',
+                '这': 'this',
+                '那': 'that',
+                '有': 'have',
+                '可以': 'can',
+                '能': 'can',
+                '会': 'will',
+                '到': 'to',
+                '从': 'from',
+                '对': 'for',
+                '为': 'for',
+            }
+            result = text
+            for zh, en in translations.items():
+                result = result.replace(zh, en + ' ')
+            result = result.strip()
+            if not result:
+                result = f'[模拟翻译结果] {text}'
+            return result
+        
+        elif source_lang == 'en' and target_lang == 'zh':
+            # 英译中模拟
+            translations = {
+                'hello': '你好',
+                'world': '世界',
+                'welcome': '欢迎',
+                'translation': '翻译',
+                'system': '系统',
+                'image': '图片',
+                'text': '文字',
+                'recognition': '识别',
+                'document': '文档',
+                'technology': '技术',
+                'the': '',
+                'is': '是',
+                'a': '一个',
+                'an': '一个',
+                'i': '我',
+                'we': '我们',
+                'in': '在',
+                'and': '和',
+                'with': '与',
+                'this': '这',
+                'that': '那',
+                'have': '有',
+                'has': '有',
+                'can': '可以',
+                'will': '会',
+                'to': '到',
+                'from': '从',
+                'for': '对',
+            }
+            words = text.lower().split()
+            result_words = []
+            for word in words:
+                clean_word = word.rstrip('.,!?;:')
+                punctuation = word[len(clean_word):]
+                translated = translations.get(clean_word, clean_word)
+                result_words.append(translated + punctuation)
+            result = ''.join(result_words)
+            if result == text.lower():
+                result = f'[模拟翻译结果] {text}'
+            return result
+        
+        else:
+            # 其他语言对，直接返回带标记的文本
+            return f'[模拟翻译] {text}'
+
     def translate(self, text, source_lang=None, target_lang='zh'):
         """
         翻译文本
@@ -103,6 +209,12 @@ class VolcEngineTranslator:
         Raises:
             Exception: 翻译失败时抛出异常
         """
+        # 模拟模式
+        if self.simulation_mode:
+            import time
+            time.sleep(0.5)  # 模拟网络延迟
+            return self._simulate_translate(text, source_lang or 'en', target_lang)
+
         method = 'POST'
         path = '/'
         query = {
@@ -157,6 +269,12 @@ def init_translator():
     return translator
 
 
+def is_simulation_mode():
+    """是否为模拟模式"""
+    t = init_translator()
+    return t.simulation_mode
+
+
 def translate_text(text, source_lang, target_lang, use_glossary=True):
     """
     翻译文本（支持术语表）
@@ -171,6 +289,7 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
         dict: 包含翻译结果和术语匹配信息
             - translation: 翻译后的文本
             - glossary_matches: 匹配的术语列表
+            - simulation: 是否为模拟模式
     """
     t = init_translator()
 
@@ -200,7 +319,8 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
     if volc_source and volc_source == volc_target:
         return {
             'translation': text,
-            'glossary_matches': []
+            'glossary_matches': [],
+            'simulation': t.simulation_mode
         }
 
     # 应用术语表预处理
@@ -222,17 +342,9 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
     if term_mapping:
         from glossary_service import get_glossary_list
         all_terms = get_glossary_list(source_lang, target_lang)
-        matched_source_terms = []
-        for term in all_terms:
-            if any(placeholder.replace('__GLOSSARY_', '').replace('__', '') in str(term_mapping.keys()) for placeholder in term_mapping.keys()):
-                matched_source_terms.append({
-                    'source_term': term['source_term'],
-                    'target_term': term['target_term'],
-                    'id': term['id']
-                })
         # 通过原文检查匹配
+        import re
         for term in all_terms:
-            import re
             flags = 0 if term.get('case_sensitive', False) else re.IGNORECASE
             if re.search(r'\b' + re.escape(term['source_term']) + r'\b', text, flags):
                 glossary_matches.append({
@@ -243,5 +355,6 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
 
     return {
         'translation': translated_text,
-        'glossary_matches': glossary_matches
+        'glossary_matches': glossary_matches,
+        'simulation': t.simulation_mode
     }

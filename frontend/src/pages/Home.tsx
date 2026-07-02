@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Languages, Loader2, Copy, Check } from 'lucide-react';
+import { FileText, Languages, Loader2, Copy, Check, Sparkles, ArrowRight } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
 import RealtimeSubtitle from '@/components/RealtimeSubtitle';
 import { uploadFile, performOCR, translateText } from '@/services/api';
@@ -27,6 +27,7 @@ export default function Home() {
   const [error, setError] = useState<string>('');
   const [copiedOriginal, setCopiedOriginal] = useState(false);
   const [copiedTranslation, setCopiedTranslation] = useState(false);
+  const [isSimulation, setIsSimulation] = useState<boolean>(false);
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
@@ -86,6 +87,7 @@ export default function Home() {
       }
 
       setTranslatedText(translateResponse.translatedText);
+      setIsSimulation(translateResponse.simulation || false);
       setIsTranslating(false);
     } catch (err: any) {
       setError(err.message || '翻译时出错');
@@ -176,17 +178,17 @@ export default function Home() {
               </div>
 
               {/* 语言选择 + 翻译按钮 */}
-              <div className="p-4 bg-gray-50 border-b">
+              <div className="p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b">
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <div className="flex-1 w-full">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
                       源语言
                     </label>
                     <select
                       value={sourceLang}
                       onChange={(e) => setSourceLang(e.target.value)}
                       disabled={isTranslating}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-400 text-base font-medium transition-all bg-white"
                     >
                       {LANGUAGES.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -196,19 +198,21 @@ export default function Home() {
                     </select>
                   </div>
 
-                  <div className="flex items-center justify-center pt-5">
-                    <span className="text-2xl text-gray-400">→</span>
+                  <div className="flex items-center justify-center pt-2 sm:pt-5">
+                    <div className="p-3 bg-white rounded-full shadow-md">
+                      <ArrowRight className="w-6 h-6 text-blue-500" />
+                    </div>
                   </div>
 
                   <div className="flex-1 w-full">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
                       目标语言
                     </label>
                     <select
                       value={targetLang}
                       onChange={(e) => setTargetLang(e.target.value)}
                       disabled={isTranslating}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-400 text-base font-medium transition-all bg-white"
                     >
                       {LANGUAGES.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -218,26 +222,26 @@ export default function Home() {
                     </select>
                   </div>
 
-                  <div className="pt-5">
+                  <div className="pt-2 sm:pt-5 w-full sm:w-auto">
                     <button
                       onClick={handleTranslate}
                       disabled={isTranslating || !originalText}
                       className={`
-                        flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all
+                        w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-bold text-lg transition-all transform
                         ${isTranslating || !originalText
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl active:scale-95'
+                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
                         }
                       `}
                     >
                       {isTranslating ? (
                         <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <Loader2 className="w-6 h-6 animate-spin" />
                           翻译中...
                         </>
                       ) : (
                         <>
-                          <Languages className="w-5 h-5" />
+                          <Sparkles className="w-6 h-6" />
                           开始翻译
                         </>
                       )}
@@ -278,12 +282,19 @@ export default function Home() {
 
                 {/* 译文 */}
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 border-b">
-                    <span className="font-medium text-blue-700">译文</span>
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-100 to-purple-100 border-b">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-blue-700">译文</span>
+                      {isSimulation && (
+                        <span className="text-xs px-2 py-0.5 bg-yellow-400 text-yellow-900 rounded-full font-semibold">
+                          模拟模式
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => translatedText && copyToClipboard(translatedText, 'translation')}
                       disabled={!translatedText}
-                      className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-blue-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {copiedTranslation ? (
                         <Check className="w-4 h-4 text-green-500" />
@@ -314,8 +325,28 @@ export default function Home() {
 
           {/* 上传提示 */}
           {!uploadedFile && !isRecognizing && (
-            <div className="text-center text-gray-500 py-8">
-              <p className="text-lg">👆 上传一张包含文字的图片开始翻译</p>
+            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+              <div className="text-5xl mb-4">👆</div>
+              <p className="text-xl font-semibold text-gray-800 mb-2">
+                上传一张包含文字的图片开始翻译
+              </p>
+              <p className="text-gray-500 mb-6">
+                支持 JPG、PNG 格式，拖拽或点击上传区域选择图片
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm">
+                  <span>📷</span>
+                  <span>图片OCR识别</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-full text-sm">
+                  <span>🌐</span>
+                  <span>多语言翻译</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-sm">
+                  <span>📝</span>
+                  <span>术语表功能</span>
+                </div>
+              </div>
             </div>
           )}
         </div>

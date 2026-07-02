@@ -24,6 +24,7 @@ export interface TranslateResponse {
   translatedText: string;
   sourceLang: string;
   targetLang: string;
+  simulation?: boolean;
   glossaryMatches: Array<{
     source_term: string;
     target_term: string;
