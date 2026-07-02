@@ -269,36 +269,50 @@ def _split_joined_words(text):
     word_dict = _get_word_dict()
     
     def split_word(joined):
-        """使用动态规划分割单个连写单词，返回最优分割"""
+        """使用动态规划分割单个连写单词，返回最优分割
+        
+        代价函数设计：
+        - 每个词的基础代价 = 1.0（鼓励更少的词）
+        - 长词折扣 = 1.0/length（长词代价更低，鼓励长词）
+        - 短词惩罚：1-2字符的词额外加 3.0 惩罚（避免过度分割成 a, th 等）
+        - 总代价 = sum(1.0 + 1.0/length + penalty)
+        这样 'that|he|might' (3.25+2.5+2.2=7.95) 会优于 'th|a|the|might' (5.5+5.0+3.33+2.2=16.03)
+        """
         n = len(joined)
         if n <= 3:
             return joined
-        
-        # dp[i] = (最小未匹配数, 上一个分割点)
-        # dp[i] 表示前i个字符的最优分割
+
+        MAX_WORD_LEN = 20
+
+        # dp[i] = (最小代价, 上一个分割点j)
         dp = [None] * (n + 1)
-        dp[0] = (0, -1)
-        
+        dp[0] = (0.0, -1)
+
         for i in range(1, n + 1):
             best = None
-            # 尝试所有可能的单词长度（1-15个字符）
-            for length in range(min(i, 15), 0, -1):
+            # 尝试所有可能的单词长度（1~MAX_WORD_LEN）
+            for length in range(1, min(i, MAX_WORD_LEN) + 1):
                 j = i - length
                 if dp[j] is None:
                     continue
                 word = joined[j:i].lower()
                 if word in word_dict:
-                    cost = dp[j][0]
-                    if best is None or cost < best[0]:
-                        best = (cost, j)
-            
+                    # 基础代价1.0 + 长词折扣1.0/length
+                    word_cost = 1.0 + 1.0 / length
+                    # 短词惩罚（1-2字符的词很可能是误分割）
+                    if length <= 2:
+                        word_cost += 3.0
+                    total_cost = dp[j][0] + word_cost
+                    if best is None or total_cost < best[0]:
+                        best = (total_cost, j)
+
             if best is not None:
                 dp[i] = best
-        
+
         # 回溯找分割方案
         if dp[n] is None:
             return joined
-        
+
         words = []
         i = n
         while i > 0:
@@ -310,14 +324,14 @@ def _split_joined_words(text):
                 break
             words.append(joined[j:i])
             i = j
-        
+
         words.reverse()
-        
+
         # 验证：所有分割出的词都在词典中
         for w in words:
             if w.lower() not in word_dict:
                 return joined
-        
+
         # 只有分割成2个以上词时才返回分割结果
         if len(words) >= 2:
             return ' '.join(words)
@@ -361,6 +375,14 @@ def _fix_punctuation(text):
     text = re.sub(r'\.+', '.', text)
     text = re.sub(r'!+', '!', text)
     text = re.sub(r'\?+', '?', text)
+
+    # 在标点后插入缺失的空格（OCR常见问题：标点后直接跟字母，无空格）
+    # 句号/问号/感叹号 后跟大写字母 → 句子边界，插入空格
+    text = re.sub(r'([.!?])([A-Z])', r'\1 \2', text)
+    # 逗号/分号/冒号 后跟任意字母 → 插入空格
+    text = re.sub(r'([,;:])([a-zA-Z])', r'\1 \2', text)
+    # 句号后跟小写字母也插入空格（可能是OCR漏掉的空格）
+    text = re.sub(r'([.])([a-z])', r'\1 \2', text)
 
     # 修复句首小写字母（非引号内）
     sentences = re.split(r'(?<=[.!?])\s+', text)
