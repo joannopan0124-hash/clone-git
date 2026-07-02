@@ -21,7 +21,7 @@ from speech_service import (
 )
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # 配置
 UPLOAD_FOLDER = '/tmp/uploads'
@@ -506,4 +506,4 @@ def get_speech_status():
 if __name__ == '__main__':
     init_ocr()
     init_speech_translator()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
