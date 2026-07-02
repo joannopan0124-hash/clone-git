@@ -17,6 +17,49 @@ def init_ocr():
     return ocr
 
 
+def _parse_ocr_result(result):
+    """
+    解析PaddleOCR返回结果
+
+    PaddleOCR返回格式:
+    [
+        [
+            [bbox, (text, score)],
+            [bbox, (text, score)],
+            ...
+        ]
+    ]
+
+    Args:
+        result: PaddleOCR返回的结果
+
+    Returns:
+        tuple: (识别出的文本, 平均置信度)
+    """
+    if not result or not result[0]:
+        return '', 0.0
+
+    text_parts = []
+    total_confidence = 0
+    count = 0
+
+    for item in result[0]:
+        if len(item) >= 2:
+            text_score = item[1]
+            if isinstance(text_score, tuple) and len(text_score) >= 2:
+                text = text_score[0]
+                score = text_score[1]
+                if text and text.strip():
+                    text_parts.append(text.strip())
+                    total_confidence += score
+                    count += 1
+
+    full_text = '\n'.join(text_parts)
+    avg_confidence = total_confidence / count if count > 0 else 0.0
+
+    return full_text, avg_confidence
+
+
 def perform_ocr(image_path):
     """
     使用PaddleOCR对图片进行文字识别
@@ -29,28 +72,7 @@ def perform_ocr(image_path):
     """
     ocr = init_ocr()
     result = ocr.ocr(image_path)
-
-    if not result or not result[0]:
-        return '', 0.0
-
-    ocr_result = result[0]
-    rec_texts = ocr_result.get('rec_texts', [])
-    rec_scores = ocr_result.get('rec_scores', [])
-
-    text_parts = []
-    total_confidence = 0
-    count = 0
-
-    for text, score in zip(rec_texts, rec_scores):
-        if text.strip():
-            text_parts.append(text)
-            total_confidence += score
-            count += 1
-
-    full_text = '\n'.join(text_parts)
-    avg_confidence = total_confidence / count if count > 0 else 0.0
-
-    return full_text, avg_confidence
+    return _parse_ocr_result(result)
 
 
 def perform_ocr_from_bytes(image_bytes):
@@ -69,25 +91,4 @@ def perform_ocr_from_bytes(image_bytes):
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     result = ocr.ocr(img)
-
-    if not result or not result[0]:
-        return '', 0.0
-
-    ocr_result = result[0]
-    rec_texts = ocr_result.get('rec_texts', [])
-    rec_scores = ocr_result.get('rec_scores', [])
-
-    text_parts = []
-    total_confidence = 0
-    count = 0
-
-    for text, score in zip(rec_texts, rec_scores):
-        if text.strip():
-            text_parts.append(text)
-            total_confidence += score
-            count += 1
-
-    full_text = '\n'.join(text_parts)
-    avg_confidence = total_confidence / count if count > 0 else 0.0
-
-    return full_text, avg_confidence
+    return _parse_ocr_result(result)
