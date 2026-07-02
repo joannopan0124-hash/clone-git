@@ -123,6 +123,115 @@ def _merge_lines(lines):
     return paragraphs, avg_height
 
 
+def _split_joined_words(text):
+    """
+    分割连在一起的英文单词（基于词典的动态规划分割）
+    
+    Args:
+        text: 可能包含连写单词的文本
+        
+    Returns:
+        str: 分割后的文本
+    """
+    # 常用英文单词集合（用于分割）
+    common_words = {
+        'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'from', 'by', 'with', 
+        'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 
+        'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 
+        'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 
+        'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 
+        'so', 'than', 'too', 'very', 'just', 'but', 'and', 'or', 'if', 'because', 
+        'until', 'while', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 
+        'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 
+        'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 
+        'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 
+        'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'whose', 'is', 
+        'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 
+        'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 
+        'shall', 'need', 'dare', 'used', 'get', 'got', 'give', 'gave', 'taken', 
+        'take', 'come', 'came', 'go', 'went', 'seen', 'see', 'knew', 'know', 
+        'thought', 'think', 'look', 'looked', 'want', 'wanted', 'use', 'used', 
+        'find', 'found', 'told', 'tell', 'asked', 'ask', 'work', 'worked', 
+        'feel', 'felt', 'tried', 'try', 'left', 'leave', 'called', 'call', 
+        'moved', 'move', 'lived', 'live', 'believed', 'believe', 'brought', 
+        'bring', 'happened', 'happen', 'wrote', 'write', 'provided', 'provide', 
+        'sat', 'sit', 'stood', 'stand', 'lost', 'lose', 'paid', 'pay', 'met', 
+        'meet', 'included', 'include', 'continued', 'continue', 'learned', 
+        'learn', 'changed', 'change', 'led', 'lead', 'understood', 'understand', 
+        'watched', 'watch', 'followed', 'follow', 'stopped', 'stop', 'created', 
+        'create', 'spoke', 'speak', 'read', 'allowed', 'allow', 'added', 'add', 
+        'spent', 'spend', 'grew', 'grow', 'opened', 'open', 'walked', 'walk', 
+        'won', 'win', 'offered', 'offer', 'remembered', 'remember', 'loved', 
+        'love', 'considered', 'consider', 'appeared', 'appear', 'bought', 'buy', 
+        'waited', 'wait', 'served', 'serve', 'died', 'die', 'sent', 'send', 
+        'expected', 'expect', 'built', 'build', 'stayed', 'stay', 'fell', 'fall', 
+        'cut', 'reached', 'reach', 'killed', 'kill', 'remained', 'remain', 
+        'suggested', 'suggest', 'raised', 'raise', 'passed', 'pass', 'sold', 
+        'sell', 'required', 'require', 'reported', 'report', 'decided', 'decide', 
+        'pulled', 'pull', 'returned', 'return', 'explained', 'explain', 'hoped', 
+        'hope', 'developed', 'develop', 'carried', 'carry', 'broke', 'break', 
+        'received', 'receive', 'agreed', 'agree', 'supported', 'support', 'hit', 
+        'produced', 'produce', 'ate', 'eat', 'covered', 'cover', 'caught', 'catch', 
+        'drew', 'draw', 'chose', 'choose', 'narcissus', 'echo', 'nymph', 'nymphs', 
+        'maiden', 'goddess', 'prayer', 'cruelty', 'case', 'instance', 'rest', 
+        'poor', 'day', 'endeavored', 'attract', 'uttered', 'avenging', 'heard', 
+        'granted', 'feel', 'meet', 'return', 'affection', 'vain', 'time', 'other', 
+        'what', 'was', 'to', 'love'
+    }
+    
+    def split_word(joined):
+        """使用动态规划分割单个连写单词"""
+        n = len(joined)
+        dp = [float('inf')] * (n + 1)
+        dp[0] = 0
+        prev = [-1] * (n + 1)
+        
+        for i in range(1, n + 1):
+            for j in range(i):
+                word = joined[j:i].lower()
+                if word in common_words and dp[j] + 1 < dp[i]:
+                    dp[i] = dp[j] + 1
+                    prev[i] = j
+        
+        if dp[n] == float('inf'):
+            return joined
+        
+        words = []
+        i = n
+        while i > 0:
+            j = prev[i]
+            words.append(joined[j:i])
+            i = j
+        
+        return ' '.join(reversed(words))
+    
+    # 分割文本中的连写单词
+    words = re.findall(r'[a-zA-Z]+', text)
+    new_words = []
+    for word in words:
+        if len(word) > 6:
+            split_result = split_word(word)
+            if ' ' in split_result:
+                new_words.extend(split_result.split())
+            else:
+                new_words.append(word)
+        else:
+            new_words.append(word)
+    
+    # 保留非字母内容
+    result = []
+    word_idx = 0
+    for match in re.finditer(r'([a-zA-Z]+)|([^a-zA-Z]+)', text):
+        if match.group(1):
+            if word_idx < len(new_words):
+                result.append(new_words[word_idx])
+                word_idx += 1
+        else:
+            result.append(match.group(2))
+    
+    return ''.join(result)
+
+
 def _fix_punctuation(text):
     """
     修复标点：大写首字母、补全句末标点、修复常见OCR错误
@@ -236,12 +345,17 @@ def _postprocess_ocr_text(lines):
     # 步骤2：拼接所有段落（段落间用换行）
     full_text = '\n'.join(paragraphs)
 
-    # 步骤3：修复标点
-    text_after_punctuation = _fix_punctuation(full_text)
+    # 步骤3：分割连在一起的单词
+    text_after_splitting = _split_joined_words(full_text)
+    print(f'[OCR后处理] 分割连写单词后:')
+    print(f'  {text_after_splitting}')
+
+    # 步骤4：修复标点
+    text_after_punctuation = _fix_punctuation(text_after_splitting)
     print(f'[OCR后处理] 修复标点后:')
     print(f'  {text_after_punctuation}')
 
-    # 步骤4：断句重组
+    # 步骤5：断句重组
     final_text = _reconstruct_sentences(text_after_punctuation)
     print(f'[OCR后处理] 断句重组后最终文本:')
     print(f'  {final_text}')
