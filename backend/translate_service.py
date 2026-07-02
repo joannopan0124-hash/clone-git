@@ -19,7 +19,8 @@ from glossary_service import apply_glossary_to_translation, restore_glossary_ter
 
 
 # 免费在线翻译API（无需密钥）
-FREE_TRANSLATE_URL = 'https://api.mymemory.translated.net/get'
+LIBRETRANSLATE_URL = 'https://libretranslate.com/translate'
+MYMEMORY_URL = 'https://api.mymemory.translated.net/get'
 
 # 语言代码映射到 MyMemory 使用的格式
 MYMEMORY_LANG_MAP = {
@@ -36,9 +37,48 @@ MYMEMORY_LANG_MAP = {
 }
 
 
-def _call_free_translate(text, source_lang, target_lang):
+def _call_libretranslate(text, source_lang, target_lang):
     """
-    调用免费在线翻译API（MyMemory）
+    调用 LibreTranslate 免费在线翻译API
+    格式: {q: text, source: 'en', target: 'zh', format: 'text'}
+    
+    Args:
+        text: 待翻译文本
+        source_lang: 源语言代码
+        target_lang: 目标语言代码
+    
+    Returns:
+        str: 翻译结果，失败时返回 None
+    """
+    src = MYMEMORY_LANG_MAP.get(source_lang, source_lang)
+    dst = MYMEMORY_LANG_MAP.get(target_lang, target_lang)
+
+    data = {
+        'q': text,
+        'source': src,
+        'target': dst,
+        'format': 'text',
+    }
+
+    try:
+        response = requests.post(LIBRETRANSLATE_URL, json=data, timeout=15)
+        if response.status_code != 200:
+            print(f'LibreTranslate 返回错误状态码: {response.status_code}')
+            return None
+
+        result = response.json()
+        translated = result.get('translatedText')
+        if translated:
+            return translated
+        return None
+    except Exception as e:
+        print(f'LibreTranslate 调用失败: {e}')
+        return None
+
+
+def _call_mymemory(text, source_lang, target_lang):
+    """
+    调用 MyMemory 免费在线翻译API（备用）
     无需API密钥，每日有免费额度
 
     Args:
@@ -58,7 +98,7 @@ def _call_free_translate(text, source_lang, target_lang):
     }
 
     try:
-        response = requests.get(FREE_TRANSLATE_URL, params=params, timeout=15)
+        response = requests.get(MYMEMORY_URL, params=params, timeout=15)
         if response.status_code != 200:
             return None
 
@@ -68,7 +108,7 @@ def _call_free_translate(text, source_lang, target_lang):
             return translated
         return None
     except Exception as e:
-        print(f'免费翻译API调用失败: {e}')
+        print(f'MyMemory 调用失败: {e}')
         return None
 
 
@@ -1426,16 +1466,24 @@ class VolcEngineTranslator:
         Raises:
             Exception: 翻译失败时抛出异常
         """
-        # 模拟模式：先尝试免费在线翻译API，失败再回退到本地模拟翻译
+        # 模拟模式：优先尝试免费在线翻译API，失败再回退到本地模拟翻译
         if self.simulation_mode:
-            # 1. 优先尝试免费在线翻译API
-            online_result = _call_free_translate(text, source_lang or 'en', target_lang)
-            if online_result:
-                return online_result
+            # 1. 优先尝试 LibreTranslate（用户指定的免费API）
+            libre_result = _call_libretranslate(text, source_lang or 'en', target_lang)
+            if libre_result:
+                print(f'使用 LibreTranslate 翻译成功')
+                return libre_result
 
-            # 2. 在线API失败，回退到本地模拟翻译
+            # 2. LibreTranslate失败，尝试 MyMemory 备用API
+            mymemory_result = _call_mymemory(text, source_lang or 'en', target_lang)
+            if mymemory_result:
+                print(f'使用 MyMemory 翻译成功')
+                return mymemory_result
+
+            # 3. 在线API都失败，回退到本地模拟翻译
             import time
             time.sleep(0.3)
+            print(f'使用本地模拟翻译')
             return self._simulate_translate(text, source_lang or 'en', target_lang)
 
         method = 'POST'

@@ -160,25 +160,31 @@ def translate():
     """翻译API（支持术语表）"""
     data = request.json
 
-    if not data or 'text' not in data or 'sourceLang' not in data or 'targetLang' not in data:
+    # 兼容两种参数格式：
+    # 格式1: {text, sourceLang, targetLang} - 原有格式
+    # 格式2: {text, target_lang} - 用户指定的新格式
+    text = data.get('text')
+    source_lang = data.get('sourceLang') or data.get('source') or 'en'
+    target_lang = data.get('targetLang') or data.get('target_lang') or data.get('target') or 'zh'
+
+    if not text:
         return jsonify({
             'success': False,
             'error_code': 'MISSING_PARAMS',
-            'message': '缺少必要参数'
+            'message': '缺少必要参数: text'
         }), 400
 
-    text = data['text']
-    source_lang = data['sourceLang']
-    target_lang = data['targetLang']
     use_glossary = data.get('useGlossary', True)
 
     try:
         result = translate_text(text, source_lang, target_lang, use_glossary)
 
+        # 返回格式兼容：同时返回 translatedText 和 translated_text
         return jsonify({
             'success': True,
             'originalText': text,
             'translatedText': result['translation'],
+            'translated_text': result['translation'],
             'sourceLang': source_lang,
             'targetLang': target_lang,
             'glossaryMatches': result['glossary_matches'],
