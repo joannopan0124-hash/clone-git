@@ -91,6 +91,53 @@ class VolcEngineTranslator:
 
         return headers
 
+    def _lookup_word(self, word, word_dict):
+        """
+        查询单词翻译，支持词形还原（复数、过去式、进行时等）
+        """
+        # 1. 直接查找
+        if word in word_dict:
+            return word_dict[word]
+
+        # 2. 词形还原尝试
+        candidates = []
+
+        # 复数 -> 单数
+        if word.endswith('ies') and len(word) > 4:
+            candidates.append(word[:-3] + 'y')  # cities -> city
+        if word.endswith('es') and len(word) > 3:
+            candidates.append(word[:-2])  # boxes -> box
+        if word.endswith('s') and len(word) > 2:
+            candidates.append(word[:-1])  # students -> student
+
+        # 过去式 -> 原形
+        if word.endswith('ied') and len(word) > 4:
+            candidates.append(word[:-3] + 'y')  # studied -> study
+        if word.endswith('ed') and len(word) > 3:
+            candidates.append(word[:-2])  # worked -> work
+            candidates.append(word[:-1])  # liked -> like
+
+        # 现在分词 -> 原形
+        if word.endswith('ing') and len(word) > 4:
+            candidates.append(word[:-3])  # going -> go
+            candidates.append(word[:-3] + 'e')  # making -> make
+
+        # 比较级/最高级
+        if word.endswith('est') and len(word) > 4:
+            candidates.append(word[:-3])  # biggest -> big
+            candidates.append(word[:-2])  # largest -> large
+        if word.endswith('er') and len(word) > 3:
+            candidates.append(word[:-2])  # bigger -> big
+            candidates.append(word[:-1])  # larger -> large
+
+        # 尝试所有候选词形
+        for candidate in candidates:
+            if candidate in word_dict:
+                return word_dict[candidate]
+
+        # 3. 都找不到，返回原词
+        return word
+
     def _simulate_translate(self, text, source_lang, target_lang):
         """
         模拟翻译（用于演示）
@@ -1273,7 +1320,7 @@ class VolcEngineTranslator:
                 if pattern.search(result):
                     result = pattern.sub(zh_translation, result)
             
-            # 3. 对剩余的单词逐词翻译
+            # 3. 对剩余的单词逐词翻译（支持词形还原）
             if result == text:  # 没有短语匹配
                 words = text.split()
                 result_parts = []
@@ -1281,10 +1328,7 @@ class VolcEngineTranslator:
                     clean_word = word.rstrip('.,!?;:()[]{}"\'')
                     punctuation = word[len(clean_word):]
                     lower_word = clean_word.lower()
-                    if lower_word in en_to_zh:
-                        translated = en_to_zh[lower_word]
-                    else:
-                        translated = clean_word
+                    translated = self._lookup_word(lower_word, en_to_zh)
                     result_parts.append(translated + punctuation)
                 result = ''.join(result_parts)
             
