@@ -123,6 +123,139 @@ def _merge_lines(lines):
     return paragraphs, avg_height
 
 
+def _build_word_dictionary():
+    """构建英文单词词典（用于分割连写单词）"""
+    word_set = set()
+    # 从 translate_service.py 源文件中提取词典键
+    try:
+        import os
+        ts_path = os.path.join(os.path.dirname(__file__), 'translate_service.py')
+        with open(ts_path, 'r', encoding='utf-8') as f:
+            source = f.read()
+        # 提取 'word': '翻译' 格式的键
+        for match in re.finditer(r"'([a-zA-Z]+)':\s*'", source):
+            word_set.add(match.group(1).lower())
+    except Exception as e:
+        print(f'[词典加载] 从 translate_service.py 提取失败: {e}')
+
+    # 补充常见单词（确保覆盖基础词汇）
+    extra_words = """
+    the be to of and a in that have i it for not on with he as you do at
+    this but his by from they we say her she or an will my one all would
+    there their what so up out if about who get which go me when make can
+    like time no just him know take people into year your good some could
+    them see other than then now look only come its over think also back
+    after use two how our work first well way even new want because any
+    these give day most us is are was were been being am had has have does
+    did will would should could may might must shall need dare said says
+    one two three four five six seven eight nine ten hundred thousand
+    he she it they we you i me him her them us my your his its our their
+    this that these those here there where when why how what which who whom
+    has had was were is are am be been being do does did done doing
+    get got gotten give gave given go went gone come came see saw seen
+    know knew known think thought take took taken make made find found
+    tell told say said want wanted use used feel felt try tried leave left
+    call called move moved live lived believe believed bring brought happen happened
+    write wrote provide provided sit sat stand stood lose lost pay paid
+    meet met include included continue continued learn learned change changed
+    lead led understand understood watch watched follow followed stop stopped
+    create created speak spoke read allow allowed add added spend spent
+    grow grew open opened walk walked win won offer offered remember remembered
+    love loved consider considered appear appeared buy bought wait waited
+    serve served die died send sent expect expected build built stay stayed
+    fall fell cut reach reached kill killed remain remained suggest suggested
+    raise raised pass passed sell sold require required report reported
+    decide decided pull pulled return returned explain explained hope hoped
+    develop developed carry carried break broke receive received agree agreed
+    support supported hit produce produced eat ate cover covered catch caught
+    draw drew choose chose
+    shun shunned shuns shunning done doing
+    who whom whose which that what where when why how
+    all any some no not nor only own same so than too very
+    can could may might must shall should will would need dare
+    about above across after against along among around at before behind
+    below beneath beside between beyond by down during except for from in
+    inside into near of off on onto out outside over past through throughout
+    to toward under underneath up upon with within without
+    case instance rest poor day vain time other return affection
+    prayer goddess maiden nymph echo narcissus cruelty avenging
+    heard granted feel meet uttered endeavored attract
+    might some sometime one another him her his their
+    had done was were has have been is are am
+    to of and the in on at for with as by from
+    it its it's that this these those
+    not no nor or but and if because while until when where
+    would could should might must may will shall
+    him her them us you me it
+    his her their our your my its
+    all some any no every each few more most other
+    one two three first second last next
+    here there now then today tomorrow yesterday
+    great small large big little good bad new old young
+    love hate like want need feel think know see hear
+    man woman boy girl child children people person
+    day night morning evening week month year time
+    water air fire earth sun moon star sky
+    hand foot head eye ear nose mouth
+    heart mind soul body life death
+    home house room door window
+    food drink eat cook make build
+    walk run jump swim fly drive ride
+    read write speak talk tell ask answer
+    work play rest sleep wake dream
+    open close start stop begin end finish
+    come go arrive leave return stay
+    give take send receive bring carry
+    buy sell pay cost spend save
+    make do have get put set
+    look see watch find search
+    hear listen sound noise music
+    beauty beautiful ugly pretty handsome
+    true false right wrong good bad
+    happy sad angry afraid scared
+    hot cold warm cool dry wet
+    fast slow quick easy hard difficult
+    full empty open close shut
+    light dark bright black white
+    long short tall high low
+    wide narrow thick thin deep
+    heavy light hard soft
+    strong weak power energy
+    young old new ancient modern
+    first last next previous
+    single double half whole
+    public private secret open
+    free busy empty full
+    clean dirty dry wet
+    safe dangerous wild
+    sound voice word letter
+    book page chapter story tale
+    mountain hill valley river lake sea ocean
+    tree flower grass forest wood
+    bird fish horse cow dog cat
+    red blue green yellow black white
+    north south east west
+    spring summer autumn winter
+    monday tuesday wednesday thursday friday saturday sunday
+    january february march april may june july august september october november december
+    """.split()
+    for w in extra_words:
+        w = w.strip().lower()
+        if w and w.isalpha():
+            word_set.add(w)
+
+    return word_set
+
+
+# 构建词典（模块加载时执行一次）
+_WORD_DICT = None
+def _get_word_dict():
+    global _WORD_DICT
+    if _WORD_DICT is None:
+        _WORD_DICT = _build_word_dictionary()
+    return _WORD_DICT
+
+
 def _split_joined_words(text):
     """
     分割连在一起的英文单词（基于词典的动态规划分割）
@@ -133,101 +266,73 @@ def _split_joined_words(text):
     Returns:
         str: 分割后的文本
     """
-    # 常用英文单词集合（用于分割）
-    common_words = {
-        'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'from', 'by', 'with', 
-        'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 
-        'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 
-        'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 
-        'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 
-        'so', 'than', 'too', 'very', 'just', 'but', 'and', 'or', 'if', 'because', 
-        'until', 'while', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 
-        'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 
-        'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 
-        'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 
-        'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'whose', 'is', 
-        'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 
-        'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 
-        'shall', 'need', 'dare', 'used', 'get', 'got', 'give', 'gave', 'taken', 
-        'take', 'come', 'came', 'go', 'went', 'seen', 'see', 'knew', 'know', 
-        'thought', 'think', 'look', 'looked', 'want', 'wanted', 'use', 'used', 
-        'find', 'found', 'told', 'tell', 'asked', 'ask', 'work', 'worked', 
-        'feel', 'felt', 'tried', 'try', 'left', 'leave', 'called', 'call', 
-        'moved', 'move', 'lived', 'live', 'believed', 'believe', 'brought', 
-        'bring', 'happened', 'happen', 'wrote', 'write', 'provided', 'provide', 
-        'sat', 'sit', 'stood', 'stand', 'lost', 'lose', 'paid', 'pay', 'met', 
-        'meet', 'included', 'include', 'continued', 'continue', 'learned', 
-        'learn', 'changed', 'change', 'led', 'lead', 'understood', 'understand', 
-        'watched', 'watch', 'followed', 'follow', 'stopped', 'stop', 'created', 
-        'create', 'spoke', 'speak', 'read', 'allowed', 'allow', 'added', 'add', 
-        'spent', 'spend', 'grew', 'grow', 'opened', 'open', 'walked', 'walk', 
-        'won', 'win', 'offered', 'offer', 'remembered', 'remember', 'loved', 
-        'love', 'considered', 'consider', 'appeared', 'appear', 'bought', 'buy', 
-        'waited', 'wait', 'served', 'serve', 'died', 'die', 'sent', 'send', 
-        'expected', 'expect', 'built', 'build', 'stayed', 'stay', 'fell', 'fall', 
-        'cut', 'reached', 'reach', 'killed', 'kill', 'remained', 'remain', 
-        'suggested', 'suggest', 'raised', 'raise', 'passed', 'pass', 'sold', 
-        'sell', 'required', 'require', 'reported', 'report', 'decided', 'decide', 
-        'pulled', 'pull', 'returned', 'return', 'explained', 'explain', 'hoped', 
-        'hope', 'developed', 'develop', 'carried', 'carry', 'broke', 'break', 
-        'received', 'receive', 'agreed', 'agree', 'supported', 'support', 'hit', 
-        'produced', 'produce', 'ate', 'eat', 'covered', 'cover', 'caught', 'catch', 
-        'drew', 'draw', 'chose', 'choose', 'narcissus', 'echo', 'nymph', 'nymphs', 
-        'maiden', 'goddess', 'prayer', 'cruelty', 'case', 'instance', 'rest', 
-        'poor', 'day', 'endeavored', 'attract', 'uttered', 'avenging', 'heard', 
-        'granted', 'feel', 'meet', 'return', 'affection', 'vain', 'time', 'other', 
-        'what', 'was', 'to', 'love'
-    }
+    word_dict = _get_word_dict()
     
     def split_word(joined):
-        """使用动态规划分割单个连写单词"""
+        """使用动态规划分割单个连写单词，返回最优分割"""
         n = len(joined)
-        dp = [float('inf')] * (n + 1)
-        dp[0] = 0
-        prev = [-1] * (n + 1)
+        if n <= 3:
+            return joined
+        
+        # dp[i] = (最小未匹配数, 上一个分割点)
+        # dp[i] 表示前i个字符的最优分割
+        dp = [None] * (n + 1)
+        dp[0] = (0, -1)
         
         for i in range(1, n + 1):
-            for j in range(i):
+            best = None
+            # 尝试所有可能的单词长度（1-15个字符）
+            for length in range(min(i, 15), 0, -1):
+                j = i - length
+                if dp[j] is None:
+                    continue
                 word = joined[j:i].lower()
-                if word in common_words and dp[j] + 1 < dp[i]:
-                    dp[i] = dp[j] + 1
-                    prev[i] = j
+                if word in word_dict:
+                    cost = dp[j][0]
+                    if best is None or cost < best[0]:
+                        best = (cost, j)
+            
+            if best is not None:
+                dp[i] = best
         
-        if dp[n] == float('inf'):
+        # 回溯找分割方案
+        if dp[n] is None:
             return joined
         
         words = []
         i = n
         while i > 0:
-            j = prev[i]
+            if dp[i] is None:
+                return joined
+            j = dp[i][1]
+            if j < 0:
+                words.append(joined[:i])
+                break
             words.append(joined[j:i])
             i = j
         
-        return ' '.join(reversed(words))
+        words.reverse()
+        
+        # 验证：所有分割出的词都在词典中
+        for w in words:
+            if w.lower() not in word_dict:
+                return joined
+        
+        # 只有分割成2个以上词时才返回分割结果
+        if len(words) >= 2:
+            return ' '.join(words)
+        return joined
     
-    # 分割文本中的连写单词
-    words = re.findall(r'[a-zA-Z]+', text)
-    new_words = []
-    for word in words:
-        if len(word) > 6:
-            split_result = split_word(word)
-            if ' ' in split_result:
-                new_words.extend(split_result.split())
-            else:
-                new_words.append(word)
-        else:
-            new_words.append(word)
-    
-    # 保留非字母内容
+    # 使用正则分割文本：字母序列 和 非字母序列
     result = []
-    word_idx = 0
-    for match in re.finditer(r'([a-zA-Z]+)|([^a-zA-Z]+)', text):
-        if match.group(1):
-            if word_idx < len(new_words):
-                result.append(new_words[word_idx])
-                word_idx += 1
+    for match in re.finditer(r'[a-zA-Z]+|[^a-zA-Z]+', text):
+        token = match.group()
+        if token[0].isalpha() and len(token) > 4:
+            # 尝试分割连写单词
+            split_result = split_word(token)
+            result.append(split_result)
         else:
-            result.append(match.group(2))
+            result.append(token)
     
     return ''.join(result)
 
