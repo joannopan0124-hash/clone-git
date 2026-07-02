@@ -9,6 +9,7 @@ export default defineConfig({
     sourcemap: 'hidden',
   },
   server: {
+    allowedHosts: ['doctrfe.loca.lt', 'doctrbe.loca.lt', '.loca.lt'],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
