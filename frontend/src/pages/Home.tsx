@@ -28,6 +28,10 @@ export default function Home() {
   const [copiedOriginal, setCopiedOriginal] = useState(false);
   const [copiedTranslation, setCopiedTranslation] = useState(false);
   const [isSimulation, setIsSimulation] = useState<boolean>(false);
+  const [quickTestText, setQuickTestText] = useState<string>('Hello World');
+  const [quickTestResult, setQuickTestResult] = useState<string>('');
+  const [isQuickTranslating, setIsQuickTranslating] = useState<boolean>(false);
+  const [quickTestSimulation, setQuickTestSimulation] = useState<boolean>(false);
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
@@ -95,6 +99,27 @@ export default function Home() {
     }
   };
 
+  const handleQuickTranslate = async () => {
+    if (!quickTestText.trim()) return;
+
+    setIsQuickTranslating(true);
+    setQuickTestResult('');
+
+    try {
+      const translateResponse = await translateText(quickTestText, sourceLang, targetLang);
+      if (!translateResponse.success) {
+        throw new Error(translateResponse.message);
+      }
+
+      setQuickTestResult(translateResponse.translatedText);
+      setQuickTestSimulation(translateResponse.simulation || false);
+      setIsQuickTranslating(false);
+    } catch (err: any) {
+      setQuickTestResult('翻译失败: ' + (err.message || '未知错误'));
+      setIsQuickTranslating(false);
+    }
+  };
+
   const copyToClipboard = async (text: string, type: 'original' | 'translation') => {
     await navigator.clipboard.writeText(text);
     if (type === 'original') {
@@ -142,6 +167,63 @@ export default function Home() {
             onSourceLangChange={setSourceLang}
             onTargetLangChange={setTargetLang}
           />
+
+          {/* 快速翻译测试区域 */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="text-2xl">⚡</span>
+              快速翻译测试
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              直接输入文字测试翻译功能，无需上传图片
+            </p>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={quickTestText}
+                onChange={(e) => setQuickTestText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickTranslate()}
+                placeholder="输入文字，如：Hello World"
+                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-400 text-base transition-all"
+              />
+              <button
+                onClick={handleQuickTranslate}
+                disabled={isQuickTranslating || !quickTestText.trim()}
+                className={`
+                  flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all transform
+                  ${isQuickTranslating || !quickTestText.trim()
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-teal-500 text-white hover:from-green-600 hover:to-teal-600 shadow-lg hover:shadow-xl active:scale-95'
+                  }
+                `}
+              >
+                {isQuickTranslating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    翻译中...
+                  </>
+                ) : (
+                  <>
+                    <Languages className="w-5 h-5" />
+                    立即翻译
+                  </>
+                )}
+              </button>
+            </div>
+            {quickTestResult && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-semibold text-green-700">翻译结果：</span>
+                  {quickTestSimulation && (
+                    <span className="text-xs px-2 py-0.5 bg-yellow-400 text-yellow-900 rounded-full font-semibold">
+                      模拟模式
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-800 text-lg">{quickTestResult}</p>
+              </div>
+            )}
+          </div>
 
           {/* 文件上传区域 */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -276,7 +358,12 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="p-4 bg-white min-h-[200px] max-h-[400px] overflow-y-auto">
-                    <p className="text-gray-800 whitespace-pre-wrap">{originalText}</p>
+                    <textarea
+                      value={originalText}
+                      onChange={(e) => setOriginalText(e.target.value)}
+                      className="w-full h-full min-h-[180px] text-gray-800 whitespace-pre-wrap resize-none border-0 focus:outline-none bg-transparent"
+                      placeholder="识别出的文字会显示在这里，您也可以手动编辑..."
+                    />
                   </div>
                 </div>
 
