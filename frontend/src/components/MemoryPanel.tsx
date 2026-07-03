@@ -173,21 +173,21 @@ export default function MemoryPanel() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+            <label className="flex items-center justify-center gap-1 px-3 py-2 bg-black text-white rounded-lg cursor-pointer hover:bg-gray-800 transition-colors font-[楷体]">
               <Upload className="w-4 h-4" />
               <span className="text-sm font-medium">导入</span>
               <input type="file" accept=".json" onChange={handleImport} className="hidden" />
             </label>
             <button
               onClick={handleExport}
-              className="flex items-center gap-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-[楷体]"
             >
               <Download className="w-4 h-4" />
               <span className="text-sm font-medium">导出</span>
             </button>
             <button
               onClick={handleClear}
-              className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-[楷体]"
               title="清空所有记录"
             >
               <Trash2 className="w-4 h-4" />
@@ -209,7 +209,7 @@ export default function MemoryPanel() {
           </div>
           <button
             onClick={handleSearch}
-            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors whitespace-nowrap"
+            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap font-[楷体]"
           >
             搜索
           </button>
@@ -306,7 +306,7 @@ export default function MemoryPanel() {
                         <>
                           <button
                             onClick={handleUpdateEntry}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            className="p-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors"
                             title="保存"
                           >
                             <Save className="w-4 h-4" />
@@ -316,7 +316,7 @@ export default function MemoryPanel() {
                               setEditingEntry(null);
                               setEditingTargetText('');
                             }}
-                            className="p-1.5 text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                            className="p-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors"
                             title="取消"
                           >
                             <X className="w-4 h-4" />
@@ -326,25 +326,25 @@ export default function MemoryPanel() {
                         <>
                           <button
                             onClick={() => copyToClipboard(entry.target_text, entry.id)}
-                            className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            className="p-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors"
                             title="复制译文"
                           >
                             {copiedId === entry.id ? (
-                              <Check className="w-4 h-4 text-green-500" />
+                              <Check className="w-4 h-4" />
                             ) : (
                               <Copy className="w-4 h-4" />
                             )}
                           </button>
                           <button
                             onClick={() => handleEditEntry(entry)}
-                            className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            className="p-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors"
                             title="编辑译文"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteEntry(entry.id)}
-                            className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            className="p-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors"
                             title="删除"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -369,7 +369,7 @@ export default function MemoryPanel() {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -379,7 +379,7 @@ export default function MemoryPanel() {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

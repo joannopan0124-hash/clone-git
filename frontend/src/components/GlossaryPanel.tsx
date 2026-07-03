@@ -181,21 +181,21 @@ export default function GlossaryPanel() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+            <label className="flex items-center justify-center gap-1 px-3 py-2 bg-black text-white rounded-lg cursor-pointer hover:bg-gray-800 transition-colors font-[楷体]">
               <Upload className="w-4 h-4" />
               <span className="text-sm font-medium">导入</span>
               <input type="file" accept=".json" onChange={handleImport} className="hidden" />
             </label>
             <button
               onClick={handleExport}
-              className="flex items-center gap-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-[楷体]"
             >
               <Download className="w-4 h-4" />
               <span className="text-sm font-medium">导出</span>
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md"
+              className="flex items-center justify-center gap-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all shadow-md font-[楷体]"
             >
               <Plus className="w-4 h-4" />
               <span className="font-medium">添加术语</span>
@@ -295,14 +295,14 @@ export default function GlossaryPanel() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEditTerm(term)}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors"
                         title="编辑"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteTerm(term.id)}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors"
                         title="删除"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -432,30 +432,30 @@ export default function GlossaryPanel() {
 
             <div className="flex items-center justify-end gap-3 p-4 border-t bg-gray-50">
               <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingTerm(null);
-                  setFormData({
-                    sourceTerm: '',
-                    targetTerm: '',
-                    sourceLang: 'en',
-                    targetLang: 'zh',
-                    description: '',
-                    caseSensitive: false,
-                    priority: 0,
-                  });
-                }}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={editingTerm ? handleUpdateTerm : handleAddTerm}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all"
-              >
-                <Save className="w-4 h-4" />
-                {editingTerm ? '保存修改' : '添加术语'}
-              </button>
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingTerm(null);
+                setFormData({
+                  sourceTerm: '',
+                  targetTerm: '',
+                  sourceLang: 'en',
+                  targetLang: 'zh',
+                  description: '',
+                  caseSensitive: false,
+                  priority: 0,
+                });
+              }}
+              className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors font-[楷体]"
+            >
+              取消
+            </button>
+            <button
+              onClick={editingTerm ? handleUpdateTerm : handleAddTerm}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all font-[楷体]"
+            >
+              <Save className="w-4 h-4" />
+              {editingTerm ? '保存修改' : '添加术语'}
+            </button>
             </div>
           </div>
         </div>

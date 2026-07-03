@@ -36,7 +36,6 @@ export default function RealtimeSubtitle({
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 语言选项
   const languages = [
     { code: 'zh', name: '中文' },
     { code: 'en', name: '英语' },
@@ -46,7 +45,6 @@ export default function RealtimeSubtitle({
     { code: 'fr', name: '法语' },
   ];
 
-  // 启动实时字幕
   const handleStart = async () => {
     setError('');
     try {
@@ -61,7 +59,6 @@ export default function RealtimeSubtitle({
       setSubtitles([]);
       setCurrentSubtitle(null);
 
-      // 开始轮询获取字幕
       pollingIntervalRef.current = setInterval(async () => {
         try {
           const subtitleResponse = await getSubtitles(response.taskId);
@@ -74,13 +71,12 @@ export default function RealtimeSubtitle({
         } catch (err) {
           console.error('获取字幕失败:', err);
         }
-      }, 1000); // 每秒轮询一次
+      }, 1000);
     } catch (err: any) {
       setError(err.message || '启动实时字幕失败');
     }
   };
 
-  // 停止实时字幕
   const handleStop = async () => {
     if (!taskId) return;
 
@@ -100,7 +96,6 @@ export default function RealtimeSubtitle({
     }
   };
 
-  // 清理轮询
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) {
@@ -112,7 +107,7 @@ export default function RealtimeSubtitle({
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 font-[楷体]">
           <span className="text-2xl">🎙️</span>
           实时字幕
           {isSimulation && (
@@ -125,7 +120,7 @@ export default function RealtimeSubtitle({
           {!isRunning ? (
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors font-[楷体]"
             >
               <Play className="w-4 h-4" />
               开始
@@ -133,7 +128,7 @@ export default function RealtimeSubtitle({
           ) : (
             <button
               onClick={handleStop}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors font-[楷体]"
             >
               <Square className="w-4 h-4" />
               停止
@@ -142,24 +137,22 @@ export default function RealtimeSubtitle({
         </div>
       </div>
 
-      {/* 错误提示 */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
 
-      {/* 语言选择 */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1 font-[楷体]">
             源语言
           </label>
           <select
             value={sourceLang}
             onChange={(e) => onSourceLangChange(e.target.value)}
             disabled={isRunning}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 font-[楷体]"
           >
             {languages.map((lang) => (
               <option key={lang.code} value={lang.code}>
@@ -169,14 +162,14 @@ export default function RealtimeSubtitle({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1 font-[楷体]">
             目标语言
           </label>
           <select
             value={targetLang}
             onChange={(e) => onTargetLangChange(e.target.value)}
             disabled={isRunning}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 font-[楷体]"
           >
             {languages.map((lang) => (
               <option key={lang.code} value={lang.code}>
@@ -187,49 +180,62 @@ export default function RealtimeSubtitle({
         </div>
       </div>
 
-      {/* 当前字幕显示 */}
-      <div className="relative mb-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg"></div>
-        <div className="relative p-4 rounded-lg border-2 border-blue-200 bg-white/80 min-h-[100px]">
-          {isRunning ? (
-            <div className="flex items-center gap-2 mb-2">
+      {/* 两个框显示原文和译文 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* 原文框 */}
+        <div className="border-2 border-gray-300 rounded-lg p-4 min-h-[150px] bg-gray-50">
+          <div className="flex items-center gap-2 mb-3">
+            {isRunning ? (
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse delay-75"></span>
                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse delay-150"></span>
               </div>
-              <span className="text-xs text-gray-500">正在识别...</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 mb-2">
+            ) : (
               <MicOff className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-500">点击开始按钮启动</span>
-            </div>
-          )}
-          
-          {currentSubtitle && (
-            <div className="space-y-3">
-              <div className="text-lg font-medium text-gray-900">
-                {currentSubtitle.original_text}
+            )}
+            <span className="font-bold text-gray-700 font-[楷体]">原文</span>
+          </div>
+          <div className="text-lg text-gray-800 font-[楷体] min-h-[100px]">
+            {currentSubtitle ? (
+              <p>{currentSubtitle.original_text}</p>
+            ) : isRunning ? (
+              <p className="text-gray-400">等待语音输入...</p>
+            ) : (
+              <p className="text-gray-400">点击开始按钮启动</p>
+            )}
+          </div>
+        </div>
+
+        {/* 译文框 */}
+        <div className="border-2 border-blue-300 rounded-lg p-4 min-h-[150px] bg-blue-50">
+          <div className="flex items-center gap-2 mb-3">
+            {isRunning ? (
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75"></span>
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-150"></span>
               </div>
-              <div className="text-lg text-blue-600 border-l-4 border-blue-400 pl-3">
-                {currentSubtitle.translated_text}
-              </div>
-            </div>
-          )}
-          
-          {!currentSubtitle && isRunning && (
-            <div className="text-gray-400 text-center py-4">
-              等待语音输入...
-            </div>
-          )}
+            ) : (
+              <Volume2 className="w-4 h-4 text-gray-400" />
+            )}
+            <span className="font-bold text-blue-700 font-[楷体]">译文</span>
+          </div>
+          <div className="text-lg text-gray-800 font-[楷体] min-h-[100px]">
+            {currentSubtitle ? (
+              <p>{currentSubtitle.translated_text}</p>
+            ) : isRunning ? (
+              <p className="text-gray-400">等待翻译结果...</p>
+            ) : (
+              <p className="text-gray-400">点击开始按钮启动</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 字幕历史记录 */}
       {subtitles.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2 font-[楷体]">
             <Volume2 className="w-4 h-4" />
             字幕历史 ({subtitles.length}条)
           </h3>
@@ -239,24 +245,23 @@ export default function RealtimeSubtitle({
                 key={index}
                 className="p-2 bg-white rounded border border-gray-200 text-sm"
               >
-                <div className="text-gray-800">{subtitle.original_text}</div>
-                <div className="text-blue-600 mt-1">{subtitle.translated_text}</div>
+                <div className="text-gray-800 font-[楷体]">{subtitle.original_text}</div>
+                <div className="text-blue-600 mt-1 font-[楷体]">{subtitle.translated_text}</div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 状态指示 */}
       {isRunning && (
         <div className="mt-4 flex items-center justify-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span>任务运行中</span>
+            <span className="font-[楷体]">任务运行中</span>
           </div>
           <div className="flex items-center gap-1">
             <Mic className="w-4 h-4 text-green-500" />
-            <span>语音识别</span>
+            <span className="font-[楷体]">语音识别</span>
           </div>
         </div>
       )}

@@ -170,10 +170,10 @@ export default function Home() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setActiveTab('translate')}
-              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 ${
+              className={`flex items-center justify-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 font-[楷体] ${
                 activeTab === 'translate'
-                  ? 'text-blue-600 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-gray-800 text-white border-transparent hover:bg-gray-700'
               }`}
             >
               <Sparkles className="w-5 h-5" />
@@ -181,10 +181,10 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('glossary')}
-              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 ${
+              className={`flex items-center justify-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 font-[楷体] ${
                 activeTab === 'glossary'
-                  ? 'text-purple-600 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-gray-800 text-white border-transparent hover:bg-gray-700'
               }`}
             >
               <BookOpen className="w-5 h-5" />
@@ -192,10 +192,10 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('memory')}
-              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 ${
+              className={`flex items-center justify-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 font-[楷体] ${
                 activeTab === 'memory'
-                  ? 'text-amber-600 border-amber-600 bg-amber-50'
-                  : 'text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-gray-800 text-white border-transparent hover:bg-gray-700'
               }`}
             >
               <History className="w-5 h-5" />
@@ -216,20 +216,12 @@ export default function Home() {
                 <p className="text-red-700 font-medium flex-1">{error}</p>
                 <button
                   onClick={() => setError('')}
-                  className="flex-shrink-0 text-red-400 hover:text-red-600 text-xl leading-none"
+                  className="flex-shrink-0 bg-black text-white hover:bg-gray-700 text-xl leading-none w-8 h-8 flex items-center justify-center rounded font-[楷体]"
                 >
                   ×
                 </button>
               </div>
             )}
-
-          {/* 实时字幕区域 */}
-          <RealtimeSubtitle
-            sourceLang={sourceLang}
-            targetLang={targetLang}
-            onSourceLangChange={setSourceLang}
-            onTargetLangChange={setTargetLang}
-          />
 
           {/* 快速翻译测试区域 */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -253,10 +245,10 @@ export default function Home() {
                 onClick={handleQuickTranslate}
                 disabled={isQuickTranslating || !quickTestText.trim()}
                 className={`
-                  flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all transform
+                  flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all transform font-[楷体]
                   ${isQuickTranslating || !quickTestText.trim()
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-green-500 to-teal-500 text-white hover:from-green-600 hover:to-teal-600 shadow-lg hover:shadow-xl active:scale-95'
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl active:scale-95'
                   }
                 `}
               >
@@ -372,10 +364,10 @@ export default function Home() {
                       onClick={handleTranslate}
                       disabled={isTranslating || !originalText}
                       className={`
-                        w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-bold text-lg transition-all transform
+                        w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-bold text-lg transition-all transform font-[楷体]
                         ${isTranslating || !originalText
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
+                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                          : 'bg-black text-white hover:bg-gray-800 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
                         }
                       `}
                     >
@@ -410,10 +402,10 @@ export default function Home() {
                     </div>
                     <button
                       onClick={() => copyToClipboard(originalText, 'original')}
-                      className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
+                      className="flex items-center justify-center gap-1 px-3 py-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors font-[楷体]"
                     >
                       {copiedOriginal ? (
-                        <Check className="w-4 h-4 text-green-500" />
+                        <Check className="w-4 h-4" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -444,10 +436,10 @@ export default function Home() {
                     <button
                       onClick={() => translatedText && copyToClipboard(translatedText, 'translation')}
                       disabled={!translatedText}
-                      className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center gap-1 px-3 py-1.5 bg-black text-white hover:bg-gray-800 rounded transition-colors font-[楷体] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {copiedTranslation ? (
-                        <Check className="w-4 h-4 text-green-500" />
+                        <Check className="w-4 h-4" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -499,6 +491,14 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* 实时字幕区域 - 移到最底部 */}
+          <RealtimeSubtitle
+            sourceLang={sourceLang}
+            targetLang={targetLang}
+            onSourceLangChange={setSourceLang}
+            onTargetLangChange={setTargetLang}
+          />
         </div>
         )}
 
