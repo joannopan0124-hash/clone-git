@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { FileText, Languages, Loader2, Copy, Check, Sparkles, ArrowRight } from 'lucide-react';
+import { FileText, Languages, Loader2, Copy, Check, Sparkles, ArrowRight, BookOpen, History } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
 import RealtimeSubtitle from '@/components/RealtimeSubtitle';
+import GlossaryPanel from '@/components/GlossaryPanel';
+import MemoryPanel from '@/components/MemoryPanel';
 import { uploadFile, performOCR, translateText } from '@/services/api';
 
 const LANGUAGES = [
@@ -32,6 +34,7 @@ export default function Home() {
   const [quickTestResult, setQuickTestResult] = useState<string>('');
   const [isQuickTranslating, setIsQuickTranslating] = useState<boolean>(false);
   const [quickTestSimulation, setQuickTestSimulation] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'translate' | 'glossary' | 'memory'>('translate');
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
@@ -161,22 +164,64 @@ export default function Home() {
         </div>
       </header>
 
+      {/* 功能导航标签 */}
+      <nav className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setActiveTab('translate')}
+              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 ${
+                activeTab === 'translate'
+                  ? 'text-blue-600 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+              翻译
+            </button>
+            <button
+              onClick={() => setActiveTab('glossary')}
+              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 ${
+                activeTab === 'glossary'
+                  ? 'text-purple-600 border-purple-600 bg-purple-50'
+                  : 'text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <BookOpen className="w-5 h-5" />
+              术语库
+            </button>
+            <button
+              onClick={() => setActiveTab('memory')}
+              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 ${
+                activeTab === 'memory'
+                  ? 'text-amber-600 border-amber-600 bg-amber-50'
+                  : 'text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <History className="w-5 h-5" />
+              记忆库
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {/* 主要内容区域 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* 错误提示 */}
-          {error && (
-            <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3 shadow-sm">
-              <div className="flex-shrink-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">!</div>
-              <p className="text-red-700 font-medium flex-1">{error}</p>
-              <button
-                onClick={() => setError('')}
-                className="flex-shrink-0 text-red-400 hover:text-red-600 text-xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-          )}
+        {activeTab === 'translate' && (
+          <div className="space-y-6">
+            {/* 错误提示 */}
+            {error && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+                <div className="flex-shrink-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">!</div>
+                <p className="text-red-700 font-medium flex-1">{error}</p>
+                <button
+                  onClick={() => setError('')}
+                  className="flex-shrink-0 text-red-400 hover:text-red-600 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
           {/* 实时字幕区域 */}
           <RealtimeSubtitle
@@ -455,6 +500,19 @@ export default function Home() {
             </div>
           )}
         </div>
+        )}
+
+        {activeTab === 'glossary' && (
+          <div className="space-y-6">
+            <GlossaryPanel />
+          </div>
+        )}
+
+        {activeTab === 'memory' && (
+          <div className="space-y-6">
+            <MemoryPanel />
+          </div>
+        )}
       </main>
 
       {/* 底部 */}

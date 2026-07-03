@@ -2236,55 +2236,75 @@ def is_simulation_mode():
     return t.simulation_mode
 
 
-def translate_text(text, source_lang, target_lang, use_glossary=True):
+def translate_text(text, source_lang, target_lang, use_glossary=True, use_memory=True):
     """
-    翻译文本（支持术语表）
+    翻译文本（支持术语表和记忆库）
 
     Args:
         text: 待翻译文本
         source_lang: 源语言代码
         target_lang: 目标语言代码
         use_glossary: 是否使用术语表（默认True）
+        use_memory: 是否使用记忆库（默认True）
 
     Returns:
         dict: 包含翻译结果和术语匹配信息
             - translation: 翻译后的文本
             - glossary_matches: 匹配的术语列表
             - simulation: 是否为模拟模式
+            - from_memory: 是否来自记忆库
+            - memory_id: 记忆库条目ID（如果来自记忆库）
     """
     t = init_translator()
 
-    # 语言代码映射（腾讯云/火山引擎通用）
     lang_map = {
-        'zh': 'zh',      # 中文
-        'en': 'en',      # 英语
-        'ja': 'ja',      # 日语
-        'ko': 'ko',      # 韩语
-        'de': 'de',      # 德语
-        'fr': 'fr',      # 法语
-        'es': 'es',      # 西班牙语
-        'pt': 'pt',      # 葡萄牙语
-        'ru': 'ru',      # 俄语
-        'it': 'it',      # 意大利语
-        'vi': 'vi',      # 越南语
-        'th': 'th',      # 泰语
-        'ar': 'ar',      # 阿拉伯语
-        'auto': None,    # 自动检测（不指定源语言）
+        'zh': 'zh',
+        'en': 'en',
+        'ja': 'ja',
+        'ko': 'ko',
+        'de': 'de',
+        'fr': 'fr',
+        'es': 'es',
+        'pt': 'pt',
+        'ru': 'ru',
+        'it': 'it',
+        'vi': 'vi',
+        'th': 'th',
+        'ar': 'ar',
+        'auto': None,
     }
 
-    # 获取语言代码（腾讯云和火山引擎通用）
     source_lang_code = lang_map.get(source_lang, source_lang)
     target_lang_code = lang_map.get(target_lang, target_lang)
 
-    # 如果源语言和目标语言相同，直接返回原文
     if source_lang_code and source_lang_code == target_lang_code:
         return {
             'translation': text,
             'glossary_matches': [],
-            'simulation': t.simulation_mode
+            'simulation': t.simulation_mode,
+            'from_memory': False,
+            'memory_id': None
         }
 
-    # 应用术语表预处理
+    if use_memory:
+        try:
+            from translation_memory_service import get_similar_translation, increment_usage
+            if source_lang_code:
+                similar_entry = get_similar_translation(
+                    text, source_lang_code, target_lang_code, min_confidence=0.85
+                )
+                if similar_entry:
+                    increment_usage(similar_entry['id'])
+                    return {
+                        'translation': similar_entry['target_text'],
+                        'glossary_matches': similar_entry.get('glossary_matches', []),
+                        'simulation': t.simulation_mode,
+                        'from_memory': True,
+                        'memory_id': similar_entry['id']
+                    }
+        except Exception as e:
+            print(f'记忆库查询失败: {e}')
+
     term_mapping = {}
     processed_text = text
     glossary_matches = []
@@ -2292,18 +2312,14 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
     if use_glossary:
         processed_text, term_mapping = apply_glossary_to_translation(text, source_lang, target_lang)
 
-    # 调用翻译API
     translated_text = t.translate(processed_text, source_lang_code, target_lang_code)
 
-    # 还原术语
     if term_mapping:
         translated_text = restore_glossary_terms(translated_text, term_mapping)
 
-    # 收集匹配的术语信息
     if term_mapping:
         from glossary_service import get_glossary_list
         all_terms = get_glossary_list(source_lang, target_lang)
-        # 通过原文检查匹配
         import re
         for term in all_terms:
             flags = 0 if term.get('case_sensitive', False) else re.IGNORECASE
@@ -2314,8 +2330,23 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
                     'id': term['id']
                 })
 
+    if use_memory:
+        try:
+            from translation_memory_service import add_memory_entry
+            actual_source_lang = source_lang_code if source_lang_code else 'auto'
+            add_memory_entry(
+                text, translated_text,
+                actual_source_lang, target_lang_code,
+                confidence=1.0,
+                glossary_matches=glossary_matches
+            )
+        except Exception as e:
+            print(f'记忆库保存失败: {e}')
+
     return {
         'translation': translated_text,
         'glossary_matches': glossary_matches,
-        'simulation': t.simulation_mode
+        'simulation': t.simulation_mode,
+        'from_memory': False,
+        'memory_id': None
     }

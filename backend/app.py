@@ -14,6 +14,19 @@ from glossary_service import (
     import_glossary,
     export_glossary
 )
+from translation_memory_service import (
+    add_memory_entry,
+    get_memory_list,
+    search_memory,
+    get_memory_entry,
+    update_memory_entry,
+    delete_memory_entry,
+    get_similar_translation,
+    export_memory,
+    import_memory,
+    clear_memory,
+    increment_usage
+)
 from speech_service import (
     init_speech_translator,
     start_realtime_translation,
@@ -178,6 +191,18 @@ def translate():
 
     try:
         result = translate_text(text, source_lang, target_lang, use_glossary)
+
+        try:
+            add_memory_entry(
+                source_text=text,
+                target_text=result['translation'],
+                source_lang=source_lang,
+                target_lang=target_lang,
+                confidence=result.get('confidence', 1.0),
+                glossary_matches=result['glossary_matches']
+            )
+        except Exception:
+            pass
 
         # 返回格式兼容：同时返回 translatedText 和 translated_text
         return jsonify({
@@ -377,6 +402,270 @@ def export_glossary_api():
             'success': False,
             'error_code': 'EXPORT_GLOSSARY_FAILED',
             'message': f'导出术语表失败: {str(e)}'
+        }), 500
+
+
+# ==================== 翻译记忆库API ====================
+
+@app.route('/api/memory', methods=['GET'])
+def get_memory():
+    """获取翻译记忆库列表"""
+    source_lang = request.args.get('sourceLang')
+    target_lang = request.args.get('targetLang')
+    page = int(request.args.get('page', 1))
+    page_size = int(request.args.get('pageSize', 20))
+
+    try:
+        memory, total = get_memory_list(source_lang, target_lang, page, page_size)
+
+        return jsonify({
+            'success': True,
+            'memory': memory,
+            'total': total,
+            'page': page,
+            'pageSize': page_size,
+            'message': '获取翻译记忆库成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'GET_MEMORY_FAILED',
+            'message': f'获取翻译记忆库失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/search', methods=['GET'])
+def search_memory_api():
+    """搜索翻译记忆库"""
+    query = request.args.get('query', '')
+    source_lang = request.args.get('sourceLang')
+    target_lang = request.args.get('targetLang')
+    max_results = int(request.args.get('maxResults', 10))
+
+    if not query:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少搜索关键词'
+        }), 400
+
+    try:
+        results = search_memory(query, source_lang, target_lang, max_results)
+
+        return jsonify({
+            'success': True,
+            'results': results,
+            'count': len(results),
+            'message': '搜索成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'SEARCH_MEMORY_FAILED',
+            'message': f'搜索失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/similar', methods=['POST'])
+def get_similar_memory():
+    """查找相似翻译"""
+    data = request.json
+
+    if not data or 'text' not in data or 'sourceLang' not in data or 'targetLang' not in data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少必要参数: text, sourceLang, targetLang'
+        }), 400
+
+    try:
+        result = get_similar_translation(
+            data['text'],
+            data['sourceLang'],
+            data['targetLang'],
+            data.get('minConfidence', 0.7)
+        )
+
+        if result:
+            increment_usage(result['id'])
+            return jsonify({
+                'success': True,
+                'found': True,
+                'entry': result,
+                'message': '找到相似翻译'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'found': False,
+                'entry': None,
+                'message': '未找到相似翻译'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'SIMILAR_SEARCH_FAILED',
+            'message': f'查找相似翻译失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/<entry_id>', methods=['GET'])
+def get_memory_entry_api(entry_id):
+    """获取单个记忆库条目"""
+    try:
+        entry = get_memory_entry(entry_id)
+
+        if entry:
+            return jsonify({
+                'success': True,
+                'entry': entry,
+                'message': '获取成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error_code': 'ENTRY_NOT_FOUND',
+                'message': '条目不存在'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'GET_MEMORY_ENTRY_FAILED',
+            'message': f'获取失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/<entry_id>', methods=['PUT'])
+def update_memory_entry_api(entry_id):
+    """更新记忆库条目"""
+    data = request.json
+
+    if not data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少更新参数'
+        }), 400
+
+    try:
+        entry = update_memory_entry(
+            entry_id=entry_id,
+            target_text=data.get('targetText'),
+            confidence=data.get('confidence')
+        )
+
+        if entry:
+            return jsonify({
+                'success': True,
+                'entry': entry,
+                'message': '更新成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error_code': 'ENTRY_NOT_FOUND',
+                'message': '条目不存在'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'UPDATE_MEMORY_FAILED',
+            'message': f'更新失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/<entry_id>', methods=['DELETE'])
+def delete_memory_entry_api(entry_id):
+    """删除记忆库条目"""
+    try:
+        success = delete_memory_entry(entry_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': '删除成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error_code': 'ENTRY_NOT_FOUND',
+                'message': '条目不存在'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'DELETE_MEMORY_FAILED',
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/export', methods=['GET'])
+def export_memory_api():
+    """导出翻译记忆库"""
+    source_lang = request.args.get('sourceLang')
+    target_lang = request.args.get('targetLang')
+
+    try:
+        memory = export_memory(source_lang, target_lang)
+
+        return jsonify({
+            'success': True,
+            'memory': memory,
+            'count': len(memory),
+            'message': '导出成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'EXPORT_MEMORY_FAILED',
+            'message': f'导出失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/import', methods=['POST'])
+def import_memory_api():
+    """批量导入翻译记忆库"""
+    data = request.json
+
+    if not data or 'entries' not in data:
+        return jsonify({
+            'success': False,
+            'error_code': 'MISSING_PARAMS',
+            'message': '缺少条目列表'
+        }), 400
+
+    try:
+        count = import_memory(data['entries'])
+
+        return jsonify({
+            'success': True,
+            'importedCount': count,
+            'message': f'成功导入 {count} 条记录'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'IMPORT_MEMORY_FAILED',
+            'message': f'导入失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/memory/clear', methods=['POST'])
+def clear_memory_api():
+    """清空翻译记忆库"""
+    try:
+        count = clear_memory()
+
+        return jsonify({
+            'success': True,
+            'clearedCount': count,
+            'message': f'已清空 {count} 条记录'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error_code': 'CLEAR_MEMORY_FAILED',
+            'message': f'清空失败: {str(e)}'
         }), 500
 
 
