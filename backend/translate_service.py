@@ -1,8 +1,11 @@
 """
 翻译服务模块
 
-支持火山引擎机器翻译API，未配置密钥时使用免费在线翻译API + 模拟翻译回退
-文档: https://www.volcengine.com/docs/4640/65067
+支持多种翻译服务：
+1. 腾讯云机器翻译API（优先） - 需配置TENCENT_SECRET_ID和TENCENT_SECRET_KEY
+2. 火山引擎机器翻译API - 需配置VOLC_ACCESS_KEY和VOLC_SECRET_KEY
+3. 免费在线翻译API（LibreTranslate/MyMemory）
+4. 本地模拟翻译（回退）
 
 支持术语表功能，作为翻译记忆库使用
 """
@@ -152,6 +155,128 @@ def _call_mymemory(text, source_lang, target_lang):
         return None
 
 
+class TencentCloudTranslator:
+    """腾讯云翻译客户端 - 实现完整TC3签名"""
+
+    def __init__(self, secret_id=None, secret_key=None):
+        """
+        初始化腾讯云翻译客户端
+
+        Args:
+            secret_id: 腾讯云 SecretId
+            secret_key: 腾讯云 SecretKey
+        """
+        self.secret_id = secret_id or os.environ.get('TENCENT_SECRET_ID', '')
+        self.secret_key = secret_key or os.environ.get('TENCENT_SECRET_KEY', '')
+        self.host = 'tmt.ap-guangzhou.tencentcloudapi.com'
+        self.region = 'ap-guangzhou'
+        self.service = 'tmt'
+        self.version = '2018-03-21'
+        self.action = 'TextTranslate'
+        self.simulation_mode = False
+
+        if not self.secret_id or not self.secret_key:
+            print('警告: 未配置腾讯云API密钥')
+            self.simulation_mode = True
+
+    def _sign_request(self, method, path, query, body):
+        """
+        生成TC3签名
+
+        Args:
+            method: HTTP方法
+            path: URI路径
+            query: 查询参数
+            body: 请求体
+
+        Returns:
+            dict: 包含签名的请求头
+        """
+        now = datetime.utcnow()
+        timestamp = int(now.timestamp())
+        date_str = now.strftime('%Y-%m-%d')
+
+        canonical_query = urllib.parse.urlencode(sorted(query.items()))
+        canonical_headers = f'content-type:application/json\nhost:{self.host}\n'
+        signed_headers = 'content-type;host'
+        body_hash = hashlib.sha256(body.encode()).hexdigest()
+
+        canonical_request = f'{method}\n{path}\n{canonical_query}\n{canonical_headers}\n{signed_headers}\n{body_hash}'
+
+        credential_scope = f'{date_str}/{self.region}/{self.service}/tc3_request'
+        string_to_sign = f'TC3-HMAC-SHA256\n{timestamp}\n{credential_scope}\n{hashlib.sha256(canonical_request.encode()).hexdigest()}'
+
+        k_date = hmac.new(('TC3' + self.secret_key).encode(), date_str.encode(), hashlib.sha256).digest()
+        k_region = hmac.new(k_date, self.region.encode(), hashlib.sha256).digest()
+        k_service = hmac.new(k_region, self.service.encode(), hashlib.sha256).digest()
+        k_signing = hmac.new(k_service, 'tc3_request'.encode(), hashlib.sha256).digest()
+        signature = hmac.new(k_signing, string_to_sign.encode(), hashlib.sha256).hexdigest()
+
+        authorization = f'TC3-HMAC-SHA256 Credential={self.secret_id}/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}'
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Host': self.host,
+            'Authorization': authorization,
+            'X-TC-Action': self.action,
+            'X-TC-Version': self.version,
+            'X-TC-Region': self.region,
+            'X-TC-Timestamp': str(timestamp)
+        }
+
+        return headers
+
+    def translate(self, text, source_lang=None, target_lang='zh'):
+        """
+        翻译文本
+
+        Args:
+            text: 待翻译文本
+            source_lang: 源语言代码（可选，不指定则自动检测）
+            target_lang: 目标语言代码
+
+        Returns:
+            str: 翻译后的文本
+
+        Raises:
+            Exception: 翻译失败时抛出异常
+        """
+        if self.simulation_mode:
+            raise Exception('腾讯云翻译未配置密钥')
+
+        method = 'POST'
+        path = '/'
+        query = {}
+
+        req_body = {
+            'SourceText': text,
+            'Target': target_lang,
+            'Source': source_lang or 'auto',
+            'ProjectId': 0
+        }
+
+        body = json.dumps(req_body)
+        headers = self._sign_request(method, path, query, body)
+
+        url = f'https://{self.host}{path}'
+        response = requests.post(url, headers=headers, data=body, timeout=10)
+
+        if response.status_code != 200:
+            raise Exception(f'腾讯云翻译请求失败，状态码: {response.status_code}, 响应: {response.text}')
+
+        result = response.json()
+
+        error = result.get('Response', {}).get('Error')
+        if error:
+            raise Exception(f'腾讯云翻译失败: {error.get("Message", str(error))}')
+
+        translated_text = result.get('Response', {}).get('TargetText', '')
+        if not translated_text:
+            raise Exception('腾讯云翻译结果为空')
+
+        return translated_text
+
+
 class VolcEngineTranslator:
     """火山引擎翻译客户端"""
 
@@ -173,7 +298,7 @@ class VolcEngineTranslator:
         self.simulation_mode = False
 
         if not self.access_key or not self.secret_key:
-            print('警告: 未配置火山引擎API密钥，将使用免费在线翻译 + 模拟翻译回退')
+            print('警告: 未配置火山引擎API密钥')
             self.simulation_mode = True
 
     def _sign_request(self, method, path, query, body):
@@ -1963,49 +2088,73 @@ class VolcEngineTranslator:
         Raises:
             Exception: 翻译失败时抛出异常
         """
-        # 模拟模式：优先尝试免费在线翻译API，失败再回退到本地模拟翻译
+        # 模拟模式：优先尝试腾讯云翻译，然后是免费在线翻译API，最后回退到本地模拟翻译
         if self.simulation_mode:
             # 对长文本按句子分割逐句翻译，确保每句都被正确处理
             if len(text) > 200:
                 sentences = re.split(r'(?<=[.!?\n])\s+', text)
                 translated_sentences = []
+                tencent_translator = TencentCloudTranslator()
+                
                 for sentence in sentences:
                     sentence = sentence.strip()
                     if not sentence:
                         continue
                     
-                    # 1. 优先尝试 LibreTranslate（用户指定的免费API）
+                    # 1. 优先尝试腾讯云翻译
+                    if not tencent_translator.simulation_mode:
+                        try:
+                            tencent_result = tencent_translator.translate(sentence, source_lang or 'auto', target_lang)
+                            if tencent_result:
+                                translated_sentences.append(tencent_result)
+                                continue
+                        except Exception as e:
+                            print(f'腾讯云翻译失败: {e}')
+
+                    # 2. 腾讯云失败，尝试 LibreTranslate
                     libre_result = _call_libretranslate(sentence, source_lang or 'en', target_lang)
                     if libre_result and not _is_mostly_english(libre_result):
                         translated_sentences.append(libre_result)
                         continue
 
-                    # 2. LibreTranslate失败，尝试 MyMemory 备用API
+                    # 3. LibreTranslate失败，尝试 MyMemory 备用API
                     mymemory_result = _call_mymemory(sentence, source_lang or 'en', target_lang)
                     if mymemory_result and not _is_mostly_english(mymemory_result):
                         translated_sentences.append(mymemory_result)
                         continue
 
-                    # 3. 在线API都失败，回退到本地模拟翻译
+                    # 4. 在线API都失败，回退到本地模拟翻译
                     local_result = self._simulate_translate(sentence, source_lang or 'en', target_lang)
                     translated_sentences.append(local_result)
                 
                 return ' '.join(translated_sentences)
             
             # 短文本直接翻译
-            # 1. 优先尝试 LibreTranslate（用户指定的免费API）
+            tencent_translator = TencentCloudTranslator()
+            
+            # 1. 优先尝试腾讯云翻译
+            if not tencent_translator.simulation_mode:
+                try:
+                    tencent_result = tencent_translator.translate(text, source_lang or 'auto', target_lang)
+                    if tencent_result:
+                        print(f'使用腾讯云翻译成功')
+                        return tencent_result
+                except Exception as e:
+                    print(f'腾讯云翻译失败: {e}')
+
+            # 2. 腾讯云失败，尝试 LibreTranslate
             libre_result = _call_libretranslate(text, source_lang or 'en', target_lang)
             if libre_result:
                 print(f'使用 LibreTranslate 翻译成功')
                 return libre_result
 
-            # 2. LibreTranslate失败，尝试 MyMemory 备用API
+            # 3. LibreTranslate失败，尝试 MyMemory 备用API
             mymemory_result = _call_mymemory(text, source_lang or 'en', target_lang)
             if mymemory_result:
                 print(f'使用 MyMemory 翻译成功')
                 return mymemory_result
 
-            # 3. 在线API都失败，回退到本地模拟翻译
+            # 4. 在线API都失败，回退到本地模拟翻译
             import time
             time.sleep(0.3)
             print(f'使用本地模拟翻译')
@@ -2089,7 +2238,7 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
     """
     t = init_translator()
 
-    # 语言代码映射（火山引擎使用的语言代码）
+    # 语言代码映射（腾讯云/火山引擎通用）
     lang_map = {
         'zh': 'zh',      # 中文
         'en': 'en',      # 英语
@@ -2107,12 +2256,12 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
         'auto': None,    # 自动检测（不指定源语言）
     }
 
-    # 获取火山引擎语言代码
-    volc_source = lang_map.get(source_lang, source_lang)
-    volc_target = lang_map.get(target_lang, target_lang)
+    # 获取语言代码（腾讯云和火山引擎通用）
+    source_lang_code = lang_map.get(source_lang, source_lang)
+    target_lang_code = lang_map.get(target_lang, target_lang)
 
     # 如果源语言和目标语言相同，直接返回原文
-    if volc_source and volc_source == volc_target:
+    if source_lang_code and source_lang_code == target_lang_code:
         return {
             'translation': text,
             'glossary_matches': [],
@@ -2128,7 +2277,7 @@ def translate_text(text, source_lang, target_lang, use_glossary=True):
         processed_text, term_mapping = apply_glossary_to_translation(text, source_lang, target_lang)
 
     # 调用翻译API
-    translated_text = t.translate(processed_text, volc_source, volc_target)
+    translated_text = t.translate(processed_text, source_lang_code, target_lang_code)
 
     # 还原术语
     if term_mapping:
