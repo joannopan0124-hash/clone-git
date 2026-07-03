@@ -156,7 +156,7 @@ def _call_mymemory(text, source_lang, target_lang):
 
 
 class TencentCloudTranslator:
-    """腾讯云翻译客户端 - 实现完整TC3签名"""
+    """腾讯云翻译客户端 - 使用官方SDK"""
 
     def __init__(self, secret_id=None, secret_key=None):
         """
@@ -168,63 +168,12 @@ class TencentCloudTranslator:
         """
         self.secret_id = secret_id or os.environ.get('TENCENT_SECRET_ID', '')
         self.secret_key = secret_key or os.environ.get('TENCENT_SECRET_KEY', '')
-        self.host = 'tmt.ap-guangzhou.tencentcloudapi.com'
         self.region = 'ap-guangzhou'
-        self.service = 'tmt'
-        self.version = '2018-03-21'
-        self.action = 'TextTranslate'
         self.simulation_mode = False
 
         if not self.secret_id or not self.secret_key:
             print('警告: 未配置腾讯云API密钥')
             self.simulation_mode = True
-
-    def _sign_request(self, method, path, query, body):
-        """
-        生成TC3签名
-
-        Args:
-            method: HTTP方法
-            path: URI路径
-            query: 查询参数
-            body: 请求体
-
-        Returns:
-            dict: 包含签名的请求头
-        """
-        now = datetime.utcnow()
-        timestamp = int(now.timestamp())
-        date_str = now.strftime('%Y-%m-%d')
-
-        canonical_query = urllib.parse.urlencode(sorted(query.items()))
-        canonical_headers = f'content-type:application/json\nhost:{self.host}\n'
-        signed_headers = 'content-type;host'
-        body_hash = hashlib.sha256(body.encode()).hexdigest()
-
-        canonical_request = f'{method}\n{path}\n{canonical_query}\n{canonical_headers}\n{signed_headers}\n{body_hash}'
-
-        credential_scope = f'{date_str}/{self.region}/{self.service}/tc3_request'
-        string_to_sign = f'TC3-HMAC-SHA256\n{timestamp}\n{credential_scope}\n{hashlib.sha256(canonical_request.encode()).hexdigest()}'
-
-        k_date = hmac.new(('TC3' + self.secret_key).encode(), date_str.encode(), hashlib.sha256).digest()
-        k_region = hmac.new(k_date, self.region.encode(), hashlib.sha256).digest()
-        k_service = hmac.new(k_region, self.service.encode(), hashlib.sha256).digest()
-        k_signing = hmac.new(k_service, 'tc3_request'.encode(), hashlib.sha256).digest()
-        signature = hmac.new(k_signing, string_to_sign.encode(), hashlib.sha256).hexdigest()
-
-        authorization = f'TC3-HMAC-SHA256 Credential={self.secret_id}/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}'
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Host': self.host,
-            'Authorization': authorization,
-            'X-TC-Action': self.action,
-            'X-TC-Version': self.version,
-            'X-TC-Region': self.region,
-            'X-TC-Timestamp': str(timestamp)
-        }
-
-        return headers
 
     def translate(self, text, source_lang=None, target_lang='zh'):
         """
@@ -244,37 +193,94 @@ class TencentCloudTranslator:
         if self.simulation_mode:
             raise Exception('腾讯云翻译未配置密钥')
 
-        method = 'POST'
-        path = '/'
-        query = {}
+        MAX_TEXT_LENGTH = 2000
 
-        req_body = {
-            'SourceText': text,
-            'Target': target_lang,
-            'Source': source_lang or 'auto',
-            'ProjectId': 0
-        }
+        if len(text) <= MAX_TEXT_LENGTH:
+            return self._translate_single(text, source_lang, target_lang)
 
-        body = json.dumps(req_body)
-        headers = self._sign_request(method, path, query, body)
+        segments = self._split_text(text, MAX_TEXT_LENGTH)
+        results = []
+        for segment in segments:
+            translated = self._translate_single(segment, source_lang, target_lang)
+            results.append(translated)
+        return ''.join(results)
 
-        url = f'https://{self.host}{path}'
-        response = requests.post(url, headers=headers, data=body, timeout=10)
+    def _split_text(self, text, max_length):
+        """
+        按句子边界分割长文本，确保每段不超过max_length字符
 
-        if response.status_code != 200:
-            raise Exception(f'腾讯云翻译请求失败，状态码: {response.status_code}, 响应: {response.text}')
+        Args:
+            text: 待分割文本
+            max_length: 每段最大长度
 
-        result = response.json()
+        Returns:
+            list: 分割后的文本片段列表
+        """
+        segments = []
+        current_segment = ''
 
-        error = result.get('Response', {}).get('Error')
-        if error:
-            raise Exception(f'腾讯云翻译失败: {error.get("Message", str(error))}')
+        sentences = re.split(r'(?<=[.!?。！？])\s*', text)
 
-        translated_text = result.get('Response', {}).get('TargetText', '')
-        if not translated_text:
-            raise Exception('腾讯云翻译结果为空')
+        for sentence in sentences:
+            if not sentence.strip():
+                continue
 
-        return translated_text
+            if len(current_segment) + len(sentence) <= max_length:
+                current_segment += sentence
+            else:
+                if current_segment:
+                    segments.append(current_segment)
+                current_segment = sentence
+
+        if current_segment:
+            segments.append(current_segment)
+
+        if not segments:
+            segments = [text[:max_length]]
+
+        return segments
+
+    def _translate_single(self, text, source_lang=None, target_lang='zh'):
+        """
+        单次翻译（不超过2000字符）
+
+        Args:
+            text: 待翻译文本
+            source_lang: 源语言代码
+            target_lang: 目标语言代码
+
+        Returns:
+            str: 翻译后的文本
+
+        Raises:
+            Exception: 翻译失败时抛出异常
+        """
+        from tencentcloud.common import credential
+        from tencentcloud.common.profile.client_profile import ClientProfile
+        from tencentcloud.common.profile.http_profile import HttpProfile
+        from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+        from tencentcloud.tmt.v20180321 import tmt_client, models
+
+        cred = credential.Credential(self.secret_id, self.secret_key)
+        httpProfile = HttpProfile()
+        httpProfile.endpoint = "tmt.ap-guangzhou.tencentcloudapi.com"
+
+        clientProfile = ClientProfile()
+        clientProfile.httpProfile = httpProfile
+
+        client = tmt_client.TmtClient(cred, self.region, clientProfile)
+
+        req = models.TextTranslateRequest()
+        req.SourceText = text
+        req.Target = target_lang
+        req.Source = source_lang or 'auto'
+        req.ProjectId = 0
+
+        try:
+            resp = client.TextTranslate(req)
+            return resp.TargetText
+        except TencentCloudSDKException as err:
+            raise Exception(f'腾讯云翻译失败: {err.message}')
 
 
 class VolcEngineTranslator:
@@ -2207,10 +2213,20 @@ translator = None
 
 
 def init_translator():
-    """初始化翻译客户端"""
+    """初始化翻译客户端 - 优先使用腾讯云翻译"""
     global translator
     if translator is None:
-        translator = VolcEngineTranslator()
+        tencent_translator = TencentCloudTranslator()
+        if not tencent_translator.simulation_mode:
+            print('使用腾讯云翻译服务')
+            translator = tencent_translator
+        else:
+            volc_translator = VolcEngineTranslator()
+            if not volc_translator.simulation_mode:
+                print('使用火山引擎翻译服务')
+            else:
+                print('使用免费在线翻译服务')
+            translator = volc_translator
     return translator
 
 
