@@ -1,3 +1,7 @@
+import os
+# 禁用OneDNN以避免PaddlePaddle兼容性问题
+os.environ['FLAGS_use_mkldnn'] = '0'
+
 import cv2
 import numpy as np
 import re
@@ -13,7 +17,8 @@ def init_ocr():
     if ocr is None:
         ocr = PaddleOCR(
             lang='ch',
-            use_textline_orientation=True
+            use_angle_cls=True,
+            show_log=False
         )
     return ocr
 
